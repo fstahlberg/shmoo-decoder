@@ -1,24 +1,32 @@
+import copy
+
+from typing import Any, Dict, Optional
+
+from shmoo.core import registry
 
 
-
-class Predictor:
-  pass
-
-
-class Decoder:
-  
-  def add_predictor(predictor: Predictor) -> None:
-    pass
-
-
- 
 class Shmoo:
-  
-  def __init__(self, Decoder):
-    pass
-  
-  def decode(self):
-    print("Hello world")
-   
-  
-  
+
+    def __init__(self):
+        self._preprocessors = None
+        self._postprocessors = None
+        self._decoder = None
+        self._predictors = None
+
+    def set_up(self, config) -> None:
+        self._preprocessors = [registry.make_preprocessor("", "")]
+        self._postprocessors = [registry.make_postprocessor("", "")]
+        self._decoder = registry.make_decoder("", "")
+        self._decoder.add_predictor(registry.make_predictor("", ""))
+
+    def decode_raw(self, raw: Any) -> Dict[str, Any]:
+        return self.decode_features({"input_raw": raw})
+
+    def decode_features(self, input_features: Dict[str, Any]) -> Dict[str, Any]:
+        features = copy.deepcopy(input_features)
+        for preprocessor in self._preprocessors:
+            preprocessor.process(features)
+        self._decoder.process(features)
+        for postprocessor in self._postprocessors:
+            postprocessor.process(features)
+        return features
