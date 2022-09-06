@@ -1,9 +1,11 @@
 from typing import Any, Dict
 
-from shmoo.core.interface import Postprocessor
 from shmoo.core.interface import Preprocessor
+from shmoo.core.interface import Postprocessor
+from shmoo.prepostprocessing import register_processor
 
 
+@register_processor("TrivialTokenPreprocessor")
 class TrivialTokenPreprocessor(Preprocessor):
 
     def process(self, features: Dict[str, Any]) -> None:
@@ -11,6 +13,7 @@ class TrivialTokenPreprocessor(Preprocessor):
                                  features["input_raw"].split()]
 
 
+@register_processor("TrivialTokenPostprocessor")
 class TrivialTokenPostprocessor(Postprocessor):
 
     def process(self, features: Dict[str, Any]) -> None:

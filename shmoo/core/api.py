@@ -1,9 +1,7 @@
 import copy
-
 from typing import Any, Dict, Optional
 
-from shmoo.core import registry
-from shmoo import predictors
+from shmoo import prepostprocessing, decoders, predictors
 
 class Shmoo:
 
@@ -14,9 +12,9 @@ class Shmoo:
         self._predictors = None
 
     def set_up(self, config) -> None:
-        self._preprocessors = [registry.make_preprocessor("", "")]
-        self._postprocessors = [registry.make_postprocessor("", "")]
-        self._decoder = registry.make_decoder("", "")
+        self._preprocessors = [prepostprocessing.setup_processor("TrivialTokenPreprocessor", "")]
+        self._postprocessors = [prepostprocessing.setup_processor("TrivialTokenPostprocessor", "")]
+        self._decoder = decoders.setup_decoder("BeamSearch", "")
         self._decoder.add_predictor(predictors.setup_predictor("TokenBoost", ""))
 
     def decode_raw(self, raw: Any) -> Dict[str, Any]:
