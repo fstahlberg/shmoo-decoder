@@ -4,7 +4,8 @@ import numpy as np
 
 
 class Prediction:
-    pass
+    def __init__(self, token_id):
+        self.token_id = token_id
 
 
 class Predictor:
