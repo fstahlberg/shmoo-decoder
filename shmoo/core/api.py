@@ -3,7 +3,7 @@ import copy
 from typing import Any, Dict, Optional
 
 from shmoo.core import registry
-
+from shmoo import predictors
 
 class Shmoo:
 
@@ -17,7 +17,7 @@ class Shmoo:
         self._preprocessors = [registry.make_preprocessor("", "")]
         self._postprocessors = [registry.make_postprocessor("", "")]
         self._decoder = registry.make_decoder("", "")
-        self._decoder.add_predictor(registry.make_predictor("", ""))
+        self._decoder.add_predictor(predictors.setup_predictor("TokenBoost", ""))
 
     def decode_raw(self, raw: Any) -> Dict[str, Any]:
         return self.decode_features({"input_raw": raw})
