@@ -3,10 +3,10 @@ from shmoo.core.interface import Postprocessor
 from shmoo.core.interface import Decoder
 from shmoo.core.interface import Predictor
 
-from shmoo.decoders.beam import BeamDecoder
+from shmoo.decoders.greedy import GreedyDecoder
 from shmoo.predictors.common import TokenBoostPredictor
-from shmoo.prepostprocessing.text import TrivialTokenPreprocessor
-from shmoo.prepostprocessing.text import TrivialTokenPostprocessor
+from shmoo.prepostprocessing.trivial import TrivialTokenPreprocessor
+from shmoo.prepostprocessing.trivial import TrivialTokenPostprocessor
 
 
 class Registry:
@@ -24,4 +24,4 @@ def make_postprocessor(postprocessor_name: str,
 
 
 def make_decoder(decoder_name: str, decoder_config_path: str) -> Decoder:
-    return BeamDecoder()
+    return GreedyDecoder()
