@@ -99,29 +99,35 @@ class FairseqPredictor(Predictor):
         Check https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
         for an idea of how the model can actually be loaded
         """
-        model_path = "my_model.pt"
-        user_dir = "some/path"
+        model_path = "/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py/model.pt"
+        user_dir = ""
+        self._lang_pair = "en-fr"
 
         _initialize_fairseq(user_dir)
 
         self.device = torch.device("cpu")
         task = self._load_task(model_path)
         self.src_vocab_size = len(task.source_dictionary)
+
         self.model = self._build_ensemble(model_path, task)
 
     def _load_task(self, model_path):
         parser = options.get_generation_parser()
         input_args = ["--path", model_path, os.path.dirname(model_path)]
-        # commented out block: stuff for multilingual translation
-        '''
-        if lang_pair:
-            src, trg = lang_pair.split("-")
+
+        if self._lang_pair:
+            src, trg = self._lang_pair.split("-")
             input_args.extend(["--source-lang", src, "--target-lang", trg])
-        '''
+        input_args.extend(["--tokenizer", "moses", "--bpe", "subword_nmt", "--bpe-codes", "/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py/bpecodes"])
         args = options.parse_args_and_arch(parser, input_args)
 
         # Setup task, e.g., translation
-        return tasks.setup_task(args)
+        task = tasks.setup_task(args)
+
+        tokenizer = task.build_tokenizer(args)
+        import pdb;
+        pdb.set_trace()
+        return task
 
     def _build_ensemble(self, model_path, task):
         models, _ = checkpoint_utils.load_model_ensemble(
@@ -167,6 +173,7 @@ class FairseqPredictor(Predictor):
             encoder_outs = self.model.forward_encoder(encoder_input)
         state["encoder_outs"] = encoder_outs
 
+        import pdb; pdb.set_trace()
         return state
 
     def update_single_state(self, state: Dict[str, Any],
