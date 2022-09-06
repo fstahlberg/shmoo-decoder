@@ -91,7 +91,7 @@ def _initialize_fairseq(user_dir):
             fairseq_utils.import_user_module(args)
         FAIRSEQ_INITIALIZED = True
 
-@register_predictor
+@register_predictor("FairseqPredictor")
 class FairseqPredictor(Predictor):
 
     def __init__(self, predictor_config_path: str):
