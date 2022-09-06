@@ -1,9 +1,9 @@
-import importlib
 import os
 
+from shmoo.core import import_classes
 from shmoo.core.interface import Predictor
 
-# register dataclass
+# register predictor class
 PREDICTOR_REGISTRY = {}
 PREDICTOR_CLASS_NAMES = set()
 
@@ -15,7 +15,7 @@ def setup_predictor(predictor_name, config):
     else:
         return NotImplementedError
 
-    return predictor.setup_task()
+    return predictor.setup_predictor(config)
 
 
 def register_predictor(name):
@@ -54,18 +54,6 @@ def register_predictor(name):
     return register_predictor_cls
 
 
-def import_predictors(predictors_dir, namespace):
-    for file in os.listdir(predictors_dir):
-        path = os.path.join(predictors_dir, file)
-        if (
-            not file.startswith("_")
-            and not file.startswith(".")
-            and (file.endswith(".py") or os.path.isdir(path))
-        ):
-            predictor_name = file[: file.find(".py")] if file.endswith(".py") else file
-            importlib.import_module(namespace + "." + predictor_name)
-
-
-# automatically import any Python files in the tasks/ directory
+# automatically import any Python files in the predictors/ directory
 predictors_dir = os.path.dirname(__file__)
-import_predictors(predictors_dir, "shmoo.predictors")
+import_classes(predictors_dir, "shmoo.predictors")

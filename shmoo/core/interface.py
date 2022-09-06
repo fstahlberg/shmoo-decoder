@@ -10,6 +10,10 @@ class Prediction:
 
 class Predictor:
 
+    @classmethod
+    def setup_predictor(cls, config):
+        return cls()
+
     def initialize_state(self, input_features: Dict[str, Any]) -> Dict[str, Any]:
         pass
 
@@ -33,6 +37,11 @@ class Predictor:
 
 
 class Processor:
+
+    @classmethod
+    def setup_processor(cls, config):
+        return cls()
+
     def process(self, features: Dict[str, Any]) -> None:
         pass
 
@@ -46,6 +55,10 @@ class Postprocessor(Processor):
 
 
 class Decoder:
+
+    @classmethod
+    def setup_decoder(cls, config):
+        return cls()
 
     def __init__(self):
         self._predictors = []

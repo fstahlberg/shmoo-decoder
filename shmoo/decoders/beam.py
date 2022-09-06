@@ -1,8 +1,9 @@
 from typing import Any, Dict, Sequence
 
 from shmoo.core.interface import Decoder
+from shmoo.decoders import register_decoder
 
-
+@register_decoder("BeamSearch")
 class BeamDecoder(Decoder):
 
     def process(self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
