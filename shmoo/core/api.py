@@ -23,10 +23,11 @@ class Shmoo:
         return self.decode_features({"input_raw": raw})
 
     def decode_features(self, input_features: Dict[str, Any]) -> Dict[str, Any]:
-        features = copy.deepcopy(input_features)
+        input_features = copy.deepcopy(input_features)
         for preprocessor in self._preprocessors:
-            preprocessor.process(features)
-        self._decoder.process(features)
-        for postprocessor in self._postprocessors:
-            postprocessor.process(features)
-        return features
+            preprocessor.process(input_features)
+        all_output_featuress = self._decoder.process(input_features)
+        for output_features in all_output_featuress:
+            for postprocessor in self._postprocessors:
+                postprocessor.process(output_features)
+        return all_output_featuress
