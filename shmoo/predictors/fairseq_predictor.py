@@ -23,15 +23,14 @@ try:
     from fairseq.sequence_generator import EnsembleModel
     import torch
     from torch import Tensor
-    import numpy as np
 except ImportError:
     pass  # hmm?
 
 
-class FairseqPredictor:
+class FairseqPredictor(Predictor):
     """Predictor for using fairseq models."""
 
-    def __init__(self):
+    def __init__(self, predictor_config_path):
         """
         Initializes a fairseq predictor.
         
@@ -41,7 +40,8 @@ class FairseqPredictor:
         """
         # _initialize_fairseq(user_dir)
 
-        self.use_cuda = False
+        self.device = torch.device('cpu')  # self.use_cuda = False
+        self.batch_size = 1  # future: support > 1
 
         # a bunch of stuff that parses the fairseq task -- not sure how this
         # will work, it's all interface stuff
@@ -61,8 +61,7 @@ class FairseqPredictor:
         # Load ensemble
         logging.info('Loading fairseq model(s) from {}'.format(model_path))
         self.models, _ = checkpoint_utils.load_model_ensemble(
-            model_path.split(':'),
-            task=task,
+            model_path.split(':'), task=task
         )
 
         # Optimize ensemble for generation
@@ -85,19 +84,15 @@ class FairseqPredictor:
 
     def predict_next(self, **pred_args):
         """
-        Compute p(\cdot | x, y_{<i}) 
-
+        Compute p(\cdot | x, y_{<i}), returning it as a numpy array
         """
         with torch.no_grad():
-            consumed = torch.tensor([self.consumed], dtype=torch.long, device="cuda" if self.use_cuda else "cpu")
+            consumed = torch.tensor([self.consumed], dtype=torch.long, device=self.device)
             # note that this does not currently support decoding with temperature
             lprobs, _ = self.model.forward_decoder(
-                consumed,
-                self.encoder_outs,
-                self.incremental_states,
-                alpha=self.alpha
+                consumed, self.encoder_outs, self.incremental_states
             )
-            lprobs[0, self.pad_id] = utils.NEG_INF
+            lprobs[0, self.pad_id] = utils.NEG_INF  # zero out the pad index
             return lprobs[0].cpu().numpy()
 
     def initialize(self, src_sentences):
@@ -117,8 +112,8 @@ class FairseqPredictor:
         self.batch_size = len(src_sentences)  # treating it like a list of lists for now
 
         # actually, it should start with the BOS ID I think
-        self.consumed = [[] for b in range(self.batch_size)]
-        # self.consumed = [utils.GO_ID or utils.EOS_ID]
+        # self.consumed = [[] for b in range(self.batch_size)]
+        self.consumed = [utils.GO_ID or utils.EOS_ID]
 
         # tensorize source sequence
         src_batch, src_lengths = self._tensorize(src_sentences)
