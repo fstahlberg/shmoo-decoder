@@ -15,7 +15,7 @@ def setup_predictor(predictor_name, config):
     else:
         return NotImplementedError
 
-    return predictor
+    return predictor.setup_task()
 
 
 def register_predictor(name):

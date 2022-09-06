@@ -25,8 +25,3 @@ def make_postprocessor(postprocessor_name: str,
 
 def make_decoder(decoder_name: str, decoder_config_path: str) -> Decoder:
     return BeamDecoder()
-
-
-#def make_predictor(predictor_name: str,
-#                   predictor_config_path: str) -> Predictor:
-#    return BeamDecoder()
