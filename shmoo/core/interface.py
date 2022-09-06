@@ -62,6 +62,9 @@ class ESPnetProcessor(Processor):
         self.tokenizer_model = None
         self.eos_id = None
 
+        self.input_type = None
+        self.input_format = None
+
         self.check()
         self.set_up()
 
@@ -69,14 +72,28 @@ class ESPnetProcessor(Processor):
     def check(self):
         """Checks if the config file has all the necessary keys"""
 
-        for key in ['token_list', 'token_type', 'model']:
+        print("- Checking config yaml")
+
+        for key in ['train_data_path_and_name_and_type', 'token_list', 'token_type', 'model']:
+
+            if key == "train_data_path_and_name_and_type":
+                _, input_type, input_format = self.config[key][0]
+                if input_type == "speech":
+                    if input_format in ("kaldi_ark", "sound"):
+                        self.input_type = input_type
+                        self.input_format = input_format
+                    else:
+                        print(f"Input format_type {input_format} not supported yet. Currently support kaldi_ark formatted features or raw audio/sound.", file=sys.stderr)
+                        raise NotImplementedError
+                print("  - Input modaility:", input_type)
+                print("  - Input format   :", input_format)
+
             if key == "model":
                 key = self.config['token_type'] + "model"
                 if os.path.exists(self.config[key]):
                     self.tokenizer_model_file = self.config[key]
                 else:
                     print(f"Error: Cannot find {key} file at", self.config[key], file=sys.stderr)
-                    #sys.exit()
                     raise FileNotFoundError(self.config[key])
 
             if key not in self.config:
@@ -85,23 +102,24 @@ class ESPnetProcessor(Processor):
                 raise KeyError
 
             else:
-                print(key, "found", u'\u2713')
+                print("  -", key, u'\u2713')
 
     def set_up(self):
 
         for i, tok in enumerate(self.config['token_list']):
             self.token2int[tok] = i
             self.int2token[i] = tok
-        print("Loaded token2int. Vocab size:", len(self.token2int))
+        print("- Loaded token2int.")
+        print("- Vocab size:", len(self.token2int))
         # since <sos/eos> is the last token in ESPnet2 pre-processing
         self.eos_id = len(self.token2int)
-        print("Eos ID", self.eos_id)
+        print("- Eos ID", self.eos_id)
 
         if self.config["token_type"] == "bpe":
 
             self.tokenizer_model = spm.SentencePieceProcessor()
             self.tokenizer_model.load(self.tokenizer_model_file)
-            print("Loaded sentencepiece model.")
+            print("- Loaded sentencepiece model.")
 
         else:
             # Load tokenizer model (eg: spm or char tokenizer or ..)
@@ -111,13 +129,36 @@ class ESPnetProcessor(Processor):
     def process(self, features: Dict[str, Any]) -> None:
         """Tokenize text from `input_raw` and save the ids as values for `input_ids` """
 
-        if self.config['token_type'] == 'bpe':
-            features['input_ids'] = [
-                self.token2int[tok]
-                for tok in self.tokenizer_model.EncodeAsPieces(features['input_raw'])
-            ]
-        else:
-            raise NotImplemented
+        if self.input_type == "text":
+            if self.config['token_type'] == 'bpe':
+                features['input_ids'] = [
+                    self.token2int[tok]
+                    for tok in self.tokenizer_model.EncodeAsPieces(features['input_raw'])
+                ]
+                print(features["input_raw"], features["input_ids"])
+            else:
+                raise NotImplementedError
+
+        elif self.input_type == "speech":
+            if self.input_format == "kaldi_ark":
+
+                try:
+                    import kaldiio
+                    features["input_ids"] = kaldiio.load_mat(features['input_raw'])
+
+                    print(features["input_raw"], features["input_ids"].shape)
+
+                except ModuleNotFoundError:
+                    pass
+
+            elif self.input_format == "sound":
+                try:
+                    import soundfile
+                except ModuleNotFoundError:
+                    pass
+
+            else:
+                raise NotImplementedError
 
 
 class Preprocessor(Processor):
