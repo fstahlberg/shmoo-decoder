@@ -26,8 +26,8 @@ class Shmoo:
         input_features = copy.deepcopy(input_features)
         for preprocessor in self._preprocessors:
             preprocessor.process(input_features)
-        all_output_featuress = self._decoder.process(input_features)
-        for output_features in all_output_featuress:
+        all_output_features = self._decoder.process(input_features)
+        for output_features in all_output_features:
             for postprocessor in self._postprocessors:
                 postprocessor.process(output_features)
-        return all_output_featuress
+        return all_output_features
