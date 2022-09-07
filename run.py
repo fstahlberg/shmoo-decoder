@@ -2,6 +2,7 @@ from absl import app
 from absl import flags
 from ruamel.yaml import YAML
 from pathlib import Path
+import sys
 
 from shmoo.core import api
 
@@ -23,8 +24,11 @@ def main(argv):
 
     shmoo_decoder = api.Shmoo()
     shmoo_decoder.set_up(config=config)
-    output_features = shmoo_decoder.decode_raw("Why is it rare to discover new marine mammal species?")
-    print(output_features)
+    # output_features = shmoo_decoder.decode_raw("Why is it rare to discover new marine mammal species?")
+    for line in sys.stdin:
+        source_sentence = line.strip()
+        output_features = shmoo_decoder.decode_raw(source_sentence)
+        print(output_features)
 
 
 if __name__ == "__main__":
