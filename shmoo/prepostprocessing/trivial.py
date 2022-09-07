@@ -23,6 +23,9 @@ class TrivialTokenPostprocessor(Postprocessor):
 @register_processor("RemoveEOSPostprocessor")
 class RemoveEOSPostprocessor(Postprocessor):
 
+    def __init__(self, config):
+        super().__init__()
+
     def process(self, features: Dict[str, Any]) -> None:
         features["output_ids_with_eos"] = features["output_ids"]
         features["output_ids"] = features["output_ids"][:-1]

@@ -1,16 +1,12 @@
-model_path: /model/is/here
+model_dir: ../fairseq_model/wmt14.en-fr.fconv-py
 src_lang: en
 trg_lang: fr
 framework: fairseq
 decoder: 
-   BeamSearch:
-      some_param_1: 1.07
-preprocessor:
-   - MosesTokenizer:
-      some_param_1: 1.07
-   - SPMPreprocessor:
-      some_param_1: 0.77
-      some_param_2: 1.09
-postprocessor:
-   - SPMPostprocessor
-   - MosesDetokenizer
+   GreedyDecoder:
+preprocessors:
+   - FairseqBPEPreprocessor
+postprocessors:
+   - RemoveEOSPostprocessor
+   - FairseqBPEPostprocessor
+   - FairseqTokenizerPostprocessor

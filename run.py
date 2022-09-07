@@ -21,14 +21,10 @@ def main(argv):
 
     print(config)
 
-    # shmoo_decoder = api.Shmoo()
-    # shmoo_decoder.set_up(config=config)
-    # shmoo_decoder.set_up(preprocessor_specs=FLAGS.preprocessor,
-    #                      decoder_spec=FLAGS.decoder,
-    #                      predictor_specs=FLAGS.predictor,
-    #                      postprocessor_specs=FLAGS.postprocessor)
-    # output_features = shmoo_decoder.decode_raw("Translate this sentence!")
-    # print(output_features)
+    shmoo_decoder = api.Shmoo()
+    shmoo_decoder.set_up(config=config)
+    output_features = shmoo_decoder.decode_raw("Why is it rare to discover new marine mammal species?")
+    print(output_features)
 
 
 if __name__ == "__main__":

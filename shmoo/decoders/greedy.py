@@ -7,6 +7,9 @@ from shmoo.decoders import register_decoder
 @register_decoder("GreedyDecoder")
 class GreedyDecoder(Decoder):
 
+    def __init__(self, config):
+        super().__init__()
+
     def process(
             self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
         hypo = self.make_initial_hypothesis(input_features)

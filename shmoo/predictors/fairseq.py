@@ -41,17 +41,17 @@ EOS_ID = 2
 NEG_INF = float("-inf")
 
 
-@register_predictor("FairseqPredictor")
+@register_predictor("fairseq")
 class FairseqPredictor(Predictor):
 
-    def __init__(self):
+    def __init__(self, config):
         """
         Check https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
         for an idea of how the model can actually be loaded
         """
-        model_path = "/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py/model.pt"
+        model_path = f"{config['model_dir']}/model.pt"
         input_args = ["--path", model_path, os.path.dirname(model_path),
-                      "--source-lang", "en", "--target-lang", "fr"]
+                      "--source-lang", config["src_lang"], "--target-lang", config["trg_lang"]]
 
         # user_dir = ""
         # self._lang_pair = "en-fr"
