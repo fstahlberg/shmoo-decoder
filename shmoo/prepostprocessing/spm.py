@@ -2,6 +2,7 @@ from typing import Any, Dict
 
 from shmoo.core.interface import Postprocessor
 from shmoo.core.interface import Preprocessor
+from shmoo.prepostprocessing import register_processor
 
 try:
     import sentencepiece as spm
@@ -9,6 +10,7 @@ except ModuleNotFoundError:
     pass
 
 
+@register_processor("SPMPreprocessor")
 class SPMPreprocessor(Preprocessor):
 
     def __init__(self, spm_path: str):
@@ -18,6 +20,7 @@ class SPMPreprocessor(Preprocessor):
         features["input_ids"] = self._spm.encode(features['input_raw'])
 
 
+@register_processor("SPMPostprocessor")
 class SPMPostprocessor(Postprocessor):
 
     def __init__(self, spm_path: str):

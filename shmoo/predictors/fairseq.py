@@ -12,8 +12,10 @@ import logging
 import os
 from typing import Dict, List, Optional, Any
 
-from shmoo.core.interface import Predictor, Prediction
-
+from shmoo.core.interface import Predictor
+from shmoo.core.interface import Prediction
+from shmoo.core import utils
+from shmoo.predictors import register_predictor
 
 try:
     # Requires fairseq
@@ -25,30 +27,23 @@ try:
 except ImportError:
     pass  # Deal with it in decode.py
 
-
 # here: constants and functions copied from SGNMT's utils module: they
 # ultimately belong somewhere else
 GO_ID = 1
 """Reserved word ID for the start-of-sentence symbol. """
 
-
 EOS_ID = 2
 """Reserved word ID for the end-of-sentence symbol. """
-
 
 UNK_ID = 0
 """Reserved word ID for the unknown word (UNK). """
 
-
 NOTAPPLICABLE_ID = 3
 """Reserved word ID which is currently not used. """
 
-
 NEG_INF = float("-inf")
 
-
 INF = float("inf")
-
 
 EPS_P = 0.00001
 
@@ -75,6 +70,8 @@ def oov_to_unk(seq, vocab_size, unk_idx=None):
     if unk_idx is None:
         unk_idx = UNK_ID
     return [x if x < vocab_size else unk_idx for x in seq]
+
+
 # end things from SGNMT's utils module
 
 
@@ -92,9 +89,10 @@ def _initialize_fairseq(user_dir):
         FAIRSEQ_INITIALIZED = True
 
 
+@register_predictor("FairseqPredictor")
 class FairseqPredictor(Predictor):
 
-    def __init__(self, predictor_config_path: str):
+    def __init__(self):
         """
         Check https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
         for an idea of how the model can actually be loaded
@@ -112,21 +110,15 @@ class FairseqPredictor(Predictor):
         self.model = self._build_ensemble(model_path, task)
 
     def _load_task(self, model_path):
-        parser = options.get_generation_parser()
         input_args = ["--path", model_path, os.path.dirname(model_path)]
 
         if self._lang_pair:
             src, trg = self._lang_pair.split("-")
             input_args.extend(["--source-lang", src, "--target-lang", trg])
-        input_args.extend(["--tokenizer", "moses", "--bpe", "subword_nmt", "--bpe-codes", "/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py/bpecodes"])
-        args = options.parse_args_and_arch(parser, input_args)
+        input_args.extend(
+            ["--tokenizer", "moses", "--bpe", "subword_nmt", "--bpe-codes", "/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py/bpecodes"])
 
-        # Setup task, e.g., translation
-        task = tasks.setup_task(args)
-
-        tokenizer = task.build_tokenizer(args)
-        import pdb;
-        pdb.set_trace()
+        task, args = utils.make_fairseq_task(input_args)
         return task
 
     def _build_ensemble(self, model_path, task):
@@ -143,7 +135,8 @@ class FairseqPredictor(Predictor):
         ensemble_model.eval()
         return ensemble_model
 
-    def initialize_state(self, input_features: Dict[str, Any]) -> Dict[str, Any]:
+    def initialize_state(self, input_features: Dict[str, Any]) -> Dict[
+        str, Any]:
 
         # init predictor state with "consumed" sequence containing only BOS
         state = {"consumed": [GO_ID or EOS_ID]}
@@ -173,7 +166,8 @@ class FairseqPredictor(Predictor):
             encoder_outs = self.model.forward_encoder(encoder_input)
         state["encoder_outs"] = encoder_outs
 
-        import pdb; pdb.set_trace()
+        import pdb;
+        pdb.set_trace()
         return state
 
     def update_single_state(self, state: Dict[str, Any],
