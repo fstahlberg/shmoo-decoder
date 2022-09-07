@@ -6,7 +6,9 @@ try:
     from fairseq import tasks
     from fairseq import utils as fairseq_utils
 except ImportError:
-    pass  # Deal with it in decode.py
+    logging.info("Fairseq not available.")
+else:
+    logging.info("Fairseq imports successful.")
 
 # Set to true by _initialize_fairseq() after first call.
 FAIRSEQ_INITIALIZED = False

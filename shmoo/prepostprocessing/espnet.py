@@ -1,3 +1,4 @@
+from absl import logging
 from collections import OrderedDict
 from typing import Any, Dict
 import sys
@@ -11,8 +12,9 @@ try:
     from yaml import full_load
     import sentencepiece as spm
 except ImportError:
-    pass
-
+    logging.info("ESPnet not available.")
+else:
+    logging.info("ESPnet imports successful.")
 
 @register_processor("ESPnetProcessor")
 class ESPnetPreprocessor(Preprocessor):

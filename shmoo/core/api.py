@@ -37,10 +37,10 @@ class Shmoo:
         #     self._postprocessors.append(
         #         prepostprocessing.setup_processor(name, config))
 
-    def decode_raw(self, raw: Any) -> Dict[str, Any]:
+    def decode_raw(self, raw: Any) -> Sequence[Dict[str, Any]]:
         return self.decode_features({"input_raw": raw})
 
-    def decode_features(self, input_features: Dict[str, Any]) -> Dict[str, Any]:
+    def decode_features(self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
         for preprocessor in self._preprocessors:
             preprocessor.process(input_features)
         all_output_features = self._decoder.process(input_features)

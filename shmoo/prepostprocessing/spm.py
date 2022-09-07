@@ -1,3 +1,4 @@
+from absl import logging
 from typing import Any, Dict
 
 from shmoo.core.interface import Postprocessor
@@ -6,8 +7,10 @@ from shmoo.prepostprocessing import register_processor
 
 try:
     import sentencepiece as spm
-except ModuleNotFoundError:
-    pass
+except ImportError:
+    logging.info("SPM not available.")
+else:
+    logging.info("SPM imports successful.")
 
 
 @register_processor("SPMPreprocessor")

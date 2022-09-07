@@ -12,5 +12,5 @@ class GreedyDecoder(Decoder):
         hypo = self.make_initial_hypothesis(input_features)
         while not hypo.is_final():
             prediction = self.get_predictions([hypo], nbest=1)[0]
-            hypo = hypo.expand(prediction)
-        return []
+            hypo = self.make_hypothesis(prediction, lazy=True)
+        return self.make_final_output_features(input_features, [hypo])
