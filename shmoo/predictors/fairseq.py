@@ -32,9 +32,6 @@ else:
 
 # here: constants and functions copied from SGNMT's utils module: they
 # ultimately belong somewhere else
-GO_ID = 1
-"""Reserved word ID for the start-of-sentence symbol. """
-
 NEG_INF = float("-inf")
 
 
@@ -54,6 +51,7 @@ class FairseqPredictor(Predictor):
         self.device = torch.device("cpu")
         task, args = utils.make_fairseq_task(input_args)
         self.src_vocab_size = len(task.source_dictionary)
+        self.bos_index = task.source_dictionary.bos_index
         self.model = self._build_ensemble(model_path, task)
         self.encoder_outs = None
 
@@ -74,7 +72,7 @@ class FairseqPredictor(Predictor):
     def initialize_state(
             self, input_features: Dict[str, Any]) -> Dict[str, Any]:
         # init predictor state with "consumed" sequence containing only BOS
-        state = {"consumed": [GO_ID]}
+        state = {"consumed": [self.bos_index]}
 
         # add incremental states (is jit necessary? just copying from SGNMT)
         state["incremental_states"] = torch.jit.annotate(
