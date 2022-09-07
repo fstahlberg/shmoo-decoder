@@ -19,3 +19,10 @@ class TrivialTokenPostprocessor(Postprocessor):
     def process(self, features: Dict[str, Any]) -> None:
         features["output_raw"] = " ".join(
             [str(token_id) for token_id in features["output_ids"]])
+
+@register_processor("RemoveEOSPostprocessor")
+class RemoveEOSPostprocessor(Postprocessor):
+
+    def process(self, features: Dict[str, Any]) -> None:
+        features["output_ids_with_eos"] = features["output_ids"]
+        features["output_ids"] = features["output_ids"][:-1]

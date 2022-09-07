@@ -17,12 +17,16 @@ def main(argv):
     del argv  # Unused.
 
     shmoo_decoder = api.Shmoo()
-    shmoo_decoder.set_up(preprocessor_specs=FLAGS.preprocessor,
-                         decoder_spec=FLAGS.decoder,
-                         predictor_specs=FLAGS.predictor,
-                         postprocessor_specs=FLAGS.postprocessor)
-    output_features = shmoo_decoder.decode_raw("Translate this sentence!")
-    print(output_features)
+    shmoo_decoder.set_up(
+        preprocessor_specs=FLAGS.preprocessor,
+        decoder_spec=FLAGS.decoder,
+        predictor_specs=FLAGS.predictor,
+        postprocessor_specs=FLAGS.postprocessor)
+    all_output_features = shmoo_decoder.decode_raw(
+        "Why is it rare to discover new marine mammal species?")
+    for index, output_features in enumerate(all_output_features):
+        for key, val in sorted(output_features.items()):
+            print("%s: %s" % (key, val))
 
 
 if __name__ == "__main__":
