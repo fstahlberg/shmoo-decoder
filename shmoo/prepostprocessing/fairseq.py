@@ -9,11 +9,12 @@ from shmoo.prepostprocessing import register_processor
 @register_processor("FairseqTokenizerPreprocessor")
 class FairseqTokenizerPreprocessor(Preprocessor):
 
-    def __init__(self):
+    def __init__(self, config):
         task, args = utils.make_fairseq_task(
-            ['/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py',
-             '--source-lang', 'en', '--target-lang', 'fr', '--tokenizer',
-             'moses'])
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']["src_lang"], "--target-lang",
+             config['fairseq']["trg_lang"], '--tokenizer',
+             config['fairseq']["tokenizer"]])
         self._tokenizer = task.build_tokenizer(args)
 
     def process(self, features: Dict[str, Any]) -> None:
@@ -24,11 +25,12 @@ class FairseqTokenizerPreprocessor(Preprocessor):
 @register_processor("FairseqTokenizerPostprocessor")
 class FairseqTokenizerPostprocessor(Postprocessor):
 
-    def __init__(self):
+    def __init__(self, config):
         task, args = utils.make_fairseq_task(
-            ['/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py',
-             '--source-lang', 'en', '--target-lang', 'fr', '--tokenizer',
-             'moses'])
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']["src_lang"], '--target-lang',
+             config['fairseq']["trg_lang"], '--tokenizer',
+             config['fairseq']["tokenizer"]])
         self._tokenizer = task.build_tokenizer(args)
 
     def process(self, features: Dict[str, Any]) -> None:
@@ -39,12 +41,13 @@ class FairseqTokenizerPostprocessor(Postprocessor):
 @register_processor("FairseqBPEPreprocessor")
 class FairseqBPEPreprocessor(Preprocessor):
 
-    def __init__(self):
+    def __init__(self, config):
         task, args = utils.make_fairseq_task(
-            ['/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py',
-             '--source-lang', 'en', '--target-lang', 'fr', '--bpe',
-             'subword_nmt', '--bpe-codes',
-             '/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py/bpecodes'])
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
+             config['fairseq']['trg_lang'], '--bpe',
+             config['fairseq']['bpe'], '--bpe-codes',
+             f"{config['fairseq']['model_dir']}/bpecodes"])
         self._bpe = task.build_bpe(args)
         self._src_dict = task.src_dict
 
@@ -57,12 +60,13 @@ class FairseqBPEPreprocessor(Preprocessor):
 @register_processor("FairseqBPEPostprocessor")
 class FairseqBPEPostprocessor(Postprocessor):
 
-    def __init__(self):
+    def __init__(self, config):
         task, args = utils.make_fairseq_task(
-            ['/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py',
-             '--source-lang', 'en', '--target-lang', 'fr', '--bpe',
-             'subword_nmt', '--bpe-codes',
-             '/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py/bpecodes'])
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
+             config['fairseq']['trg_lang'], '--bpe',
+             config['fairseq']['bpe'], '--bpe-codes',
+             f"{config['fairseq']['model_dir']}/bpecodes"])
         self._bpe = task.build_bpe(args)
         self._tgt_dict = task.tgt_dict
 

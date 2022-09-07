@@ -2,6 +2,7 @@ import copy
 from typing import Any, Dict, Sequence
 import numpy as np
 
+from shmoo.core import utils
 
 class Hypothesis:
 
@@ -11,12 +12,6 @@ class Hypothesis:
         self.score = score
         self.output_features = output_features
         self.stale = False
-
-    def is_finished(self) -> bool:
-        try:
-            return self.output_features["output_ids"][-1] == 2
-        except IndexError:
-            return False
 
     def __str__(self):
         s = "score:%f feat:%s" % (self.score, self.output_features)
@@ -41,7 +36,7 @@ class Predictor:
 
     @classmethod
     def setup_predictor(cls, config):
-        return cls()
+        return cls(config)
 
     def initialize_state(
             self, input_features: Dict[str, Any]) -> Dict[str, Any]:
@@ -66,7 +61,7 @@ class Processor:
 
     @classmethod
     def setup_processor(cls, config):
-        return cls()
+        return cls(config)
 
     def process(self, features: Dict[str, Any]) -> None:
         pass
@@ -84,10 +79,28 @@ class Decoder:
 
     @classmethod
     def setup_decoder(cls, config):
-        return cls()
+        return cls(config)
 
-    def __init__(self):
+    def __init__(self, config):
+        try:
+            self.eos_id = config["eos_id"]
+        except KeyError:
+            self.eos_id = utils.DEFAULT_EOS_ID
         self._predictors = []
+
+    def is_finished(self, hypo: Hypothesis) -> bool:
+        try:
+            return hypo.output_features["output_ids"][-1] == self.eos_id
+        except IndexError:
+            return False
+
+    def best_hypo_finished(self, hypos: Sequence[Hypothesis]) -> bool:
+        if hypos:
+            return self.is_finished(hypos[0])
+        return True
+
+    def all_hypos_finished(self, hypos: Sequence[Hypothesis]) -> bool:
+        return all(self.is_finished(hypo) for hypo in hypos)
 
     def make_initial_hypothesis(
             self, input_features: Dict[str, Any]) -> Hypothesis:
@@ -124,7 +137,7 @@ class Decoder:
             hypos: Sequence[Hypothesis]) -> Sequence[Dict[str, Any]]:
         all_output_features = []
         for hypo in sorted(hypos, key=lambda h: -h.score):
-            if hypo.is_finished():
+            if self.is_finished(hypo):
                 hypo.output_features.update(input_features)
                 hypo.output_features["score"] = hypo.score
                 all_output_features.append(hypo.output_features)
@@ -135,7 +148,7 @@ class Decoder:
             hypos: Sequence[Hypothesis],
             nbest: int) -> Sequence[Prediction]:
         accumulated_scores = 0.0
-        unfinished_hypos = [hypo for hypo in hypos if not hypo.is_finished()]
+        unfinished_hypos = [hypo for hypo in hypos if not self.is_finished(hypo)]
         for index, predictor in enumerate(self._predictors):
             predictor_states = [hypo.states[index] for hypo in unfinished_hypos]
             accumulated_scores += predictor.predict_next(predictor_states)
@@ -153,7 +166,7 @@ class Decoder:
                     parent_hypothesis=unfinished_hypos[hypo_index]))
         # Add finished hypos
         for hypo in hypos:
-            if hypo.is_finished():
+            if self.is_finished(hypo):
                 predictions.append(
                     Prediction(
                         token_id=None, score=hypo.score,
