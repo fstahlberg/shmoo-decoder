@@ -35,9 +35,6 @@ else:
 GO_ID = 1
 """Reserved word ID for the start-of-sentence symbol. """
 
-EOS_ID = 2
-"""Reserved word ID for the end-of-sentence symbol. """
-
 NEG_INF = float("-inf")
 
 
@@ -49,36 +46,16 @@ class FairseqPredictor(Predictor):
         Check https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
         for an idea of how the model can actually be loaded
         """
-        model_path = f"{config['model_dir']}/model.pt"
-        input_args = ["--path", model_path, os.path.dirname(model_path),
-                      "--source-lang", config["src_lang"], "--target-lang", config["trg_lang"]]
-
-        # user_dir = ""
-        # self._lang_pair = "en-fr"
-
-        # _initialize_fairseq(user_dir)
-
+        model_path = f"{config['fairseq']['model_dir']}/model.pt"
+        input_args = [config['fairseq']['model_dir'],
+                      "--path", model_path,
+                      "--source-lang", config['fairseq']["src_lang"],
+                      "--target-lang", config['fairseq']["trg_lang"]]
         self.device = torch.device("cpu")
-        # task = self._load_task(model_path)
-
         task, args = utils.make_fairseq_task(input_args)
         self.src_vocab_size = len(task.source_dictionary)
-
         self.model = self._build_ensemble(model_path, task)
         self.encoder_outs = None
-
-    #
-    # def _load_task(self, model_path):
-    #     input_args = ["--path", model_path, os.path.dirname(model_path)]
-    #
-    #     if self._lang_pair:
-    #         src, trg = self._lang_pair.split("-")
-    #         input_args.extend(["--source-lang", src, "--target-lang", trg])
-    #     input_args.extend(
-    #         ["--tokenizer", "moses", "--bpe", "subword_nmt", "--bpe-codes", "/home/fstahlberg/work/shmoo/wmt14.en-fr.fconv-py/bpecodes"])
-    #
-    #     task, args = utils.make_fairseq_task(input_args)
-    #     return task
 
     def _build_ensemble(self, model_path, task):
         models, _ = checkpoint_utils.load_model_ensemble(
@@ -94,8 +71,8 @@ class FairseqPredictor(Predictor):
         ensemble_model.eval()
         return ensemble_model
 
-    def initialize_state(self, input_features: Dict[str, Any]) -> Dict[
-        str, Any]:
+    def initialize_state(
+            self, input_features: Dict[str, Any]) -> Dict[str, Any]:
         # init predictor state with "consumed" sequence containing only BOS
         state = {"consumed": [GO_ID]}
 
@@ -132,7 +109,8 @@ class FairseqPredictor(Predictor):
             new_state["consumed"].append(prediction.token_id)
         else:
             new_state = {
-                "consumed": state["consumed"] + [prediction.token_id]
+                "consumed": state["consumed"] + [prediction.token_id],
+                "incremental_states": copy.deepcopy(state["incremental_states"])
             }
         return new_state
 

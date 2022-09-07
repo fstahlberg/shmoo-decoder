@@ -13,6 +13,8 @@ else:
 # Set to true by _initialize_fairseq() after first call.
 FAIRSEQ_INITIALIZED = False
 
+DEFAULT_EOS_ID = 2
+DEFAULT_BEAM_SIZE = 4
 
 def _initialize_fairseq(user_dir):
     global FAIRSEQ_INITIALIZED

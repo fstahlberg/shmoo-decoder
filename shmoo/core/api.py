@@ -11,6 +11,7 @@ def _split_spec(spec: str) -> Tuple[str, str]:
         config = ""
     return name, config
 
+
 class Shmoo:
 
     def __init__(self):
@@ -21,30 +22,35 @@ class Shmoo:
     def set_up(self, config: Dict[str, Any]) -> None:
 
         # Assumption: There can only be one decoder
-        self._decoder = decoders.setup_decoder(list(config["decoder"].keys())[0], config)
+        self._decoder = decoders.setup_decoder(config["decoder"], config)
 
         self._decoder.add_predictor(
-                predictors.setup_predictor(config["framework"], config)
+            predictors.setup_predictor(config["framework"], config)
         )
 
         for preprocessor in config["preprocessors"]:
             # preprocessor is a str if no parameters are specified
             self._preprocessors.append(
-                prepostprocessing.setup_processor(preprocessor if type(preprocessor) == str else list(preprocessor.keys())[0],
-                                                  config)
+                prepostprocessing.setup_processor(
+                    preprocessor if type(preprocessor) == str else
+                    list(preprocessor.keys())[0],
+                    config)
             )
 
         for postprocessor in config["postprocessors"]:
             # postprocessor is a str if no parameters are specified
             self._postprocessors.append(
-                prepostprocessing.setup_processor(postprocessor if type(postprocessor) == str else list(postprocessor.keys())[0],
-                                                  config)
+                prepostprocessing.setup_processor(
+                    postprocessor if type(postprocessor) == str else
+                    list(postprocessor.keys())[0],
+                    config)
             )
 
     def decode_raw(self, raw: Any) -> Sequence[Dict[str, Any]]:
         return self.decode_features({"input_raw": raw})
 
-    def decode_features(self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
+    def decode_features(
+            self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
         for preprocessor in self._preprocessors:
             preprocessor.process(input_features)
         all_output_features = self._decoder.process(input_features)

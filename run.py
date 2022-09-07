@@ -19,7 +19,6 @@ def main(argv):
     # Parse config file
     yaml = YAML(typ='safe')
     config = yaml.load(Path(FLAGS.config_path))
-
     print(config)
 
     shmoo_decoder = api.Shmoo()
@@ -27,8 +26,11 @@ def main(argv):
     # output_features = shmoo_decoder.decode_raw("Why is it rare to discover new marine mammal species?")
     for line in sys.stdin:
         source_sentence = line.strip()
-        output_features = shmoo_decoder.decode_raw(source_sentence)
-        print(output_features)
+        all_output_features = shmoo_decoder.decode_raw(source_sentence)
+        for index, output_features in enumerate(all_output_features):
+            print("\n%d. BEST OUTPUT" % (index + 1,))
+            for key, val in sorted(output_features.items()):
+                print("%s: %s" % (key, val))
 
 
 if __name__ == "__main__":

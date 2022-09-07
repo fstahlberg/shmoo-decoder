@@ -11,9 +11,10 @@ class FairseqTokenizerPreprocessor(Preprocessor):
 
     def __init__(self, config):
         task, args = utils.make_fairseq_task(
-            [config['model_dir'],
-             '--source-lang', config["src_lang"], "--target-lang", config["trg_lang"], '--tokenizer',
-             'moses'])
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']["src_lang"], "--target-lang",
+             config['fairseq']["trg_lang"], '--tokenizer',
+             config['fairseq']["tokenizer"]])
         self._tokenizer = task.build_tokenizer(args)
 
     def process(self, features: Dict[str, Any]) -> None:
@@ -26,9 +27,10 @@ class FairseqTokenizerPostprocessor(Postprocessor):
 
     def __init__(self, config):
         task, args = utils.make_fairseq_task(
-            [config['model_dir'],
-             '--source-lang', config["src_lang"], '--target-lang', config["trg_lang"], '--tokenizer',
-             'moses'])
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']["src_lang"], '--target-lang',
+             config['fairseq']["trg_lang"], '--tokenizer',
+             config['fairseq']["tokenizer"]])
         self._tokenizer = task.build_tokenizer(args)
 
     def process(self, features: Dict[str, Any]) -> None:
@@ -41,10 +43,11 @@ class FairseqBPEPreprocessor(Preprocessor):
 
     def __init__(self, config):
         task, args = utils.make_fairseq_task(
-            [config['model_dir'],
-             '--source-lang', config['src_lang'], '--target-lang', config['trg_lang'], '--bpe',
-             'subword_nmt', '--bpe-codes',
-             f"{config['model_dir']}/bpecodes"])
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
+             config['fairseq']['trg_lang'], '--bpe',
+             config['fairseq']['bpe'], '--bpe-codes',
+             f"{config['fairseq']['model_dir']}/bpecodes"])
         self._bpe = task.build_bpe(args)
         self._src_dict = task.src_dict
 
@@ -59,10 +62,11 @@ class FairseqBPEPostprocessor(Postprocessor):
 
     def __init__(self, config):
         task, args = utils.make_fairseq_task(
-            [config['model_dir'],
-             '--source-lang', config['src_lang'], '--target-lang', config['trg_lang'], '--bpe',
-             'subword_nmt', '--bpe-codes',
-             f"{config['model_dir']}/bpecodes"])
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
+             config['fairseq']['trg_lang'], '--bpe',
+             config['fairseq']['bpe'], '--bpe-codes',
+             f"{config['fairseq']['model_dir']}/bpecodes"])
         self._bpe = task.build_bpe(args)
         self._tgt_dict = task.tgt_dict
 
