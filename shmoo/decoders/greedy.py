@@ -10,7 +10,7 @@ class GreedyDecoder(Decoder):
     def process(
             self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
         hypo = self.make_initial_hypothesis(input_features)
-        while not hypo.is_final():
+        while not hypo.is_finished():
             prediction = self.get_predictions([hypo], nbest=1)[0]
             hypo = self.make_hypothesis(prediction, lazy=True)
         return self.make_final_output_features(input_features, [hypo])

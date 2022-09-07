@@ -20,6 +20,7 @@ class TrivialTokenPostprocessor(Postprocessor):
         features["output_raw"] = " ".join(
             [str(token_id) for token_id in features["output_ids"]])
 
+
 @register_processor("RemoveEOSPostprocessor")
 class RemoveEOSPostprocessor(Postprocessor):
 

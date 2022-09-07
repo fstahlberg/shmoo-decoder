@@ -132,7 +132,8 @@ class FairseqPredictor(Predictor):
             new_state["consumed"].append(prediction.token_id)
         else:
             new_state = {
-                "consumed": state["consumed"] + [prediction.token_id]
+                "consumed": state["consumed"] + [prediction.token_id],
+                "incremental_states": copy.deepcopy(state["incremental_states"])
             }
         return new_state
 

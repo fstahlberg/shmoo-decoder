@@ -12,7 +12,7 @@ class Hypothesis:
         self.output_features = output_features
         self.stale = False
 
-    def is_final(self) -> bool:
+    def is_finished(self) -> bool:
         try:
             return self.output_features["output_ids"][-1] == 2
         except IndexError:
@@ -31,6 +31,10 @@ class Prediction:
         self.token_id = token_id
         self.score = score
         self.parent_hypothesis = parent_hypothesis
+
+    def __str__(self):
+        return "token_id:%d score:%f parent:%s" % (
+            self.token_id, self.score, str(self.parent_hypothesis))
 
 
 class Predictor:
@@ -96,6 +100,9 @@ class Decoder:
 
     def make_hypothesis(self, prediction: Prediction,
                         lazy: bool = False) -> Hypothesis:
+        if prediction.token_id is None:
+            return prediction.parent_hypothesis
+
         new_states = [predictor.update_single_state(
             state=old_state, prediction=prediction, lazy=lazy) for
             predictor, old_state in zip(
@@ -117,9 +124,10 @@ class Decoder:
             hypos: Sequence[Hypothesis]) -> Sequence[Dict[str, Any]]:
         all_output_features = []
         for hypo in sorted(hypos, key=lambda h: -h.score):
-            hypo.output_features.update(input_features)
-            hypo.output_features["score"] = hypo.score
-            all_output_features.append(hypo.output_features)
+            if hypo.is_finished():
+                hypo.output_features.update(input_features)
+                hypo.output_features["score"] = hypo.score
+                all_output_features.append(hypo.output_features)
         return all_output_features
 
     def get_predictions(
@@ -127,10 +135,12 @@ class Decoder:
             hypos: Sequence[Hypothesis],
             nbest: int) -> Sequence[Prediction]:
         accumulated_scores = 0.0
+        unfinished_hypos = [hypo for hypo in hypos if not hypo.is_finished()]
         for index, predictor in enumerate(self._predictors):
-            predictor_states = [hypo.states[index] for hypo in hypos]
+            predictor_states = [hypo.states[index] for hypo in unfinished_hypos]
             accumulated_scores += predictor.predict_next(predictor_states)
-        accumulated_scores += [hypo.score for hypo in hypos]
+        base_scores = [hypo.score for hypo in unfinished_hypos]
+        accumulated_scores += np.expand_dims(base_scores, 1)
         flat_indices = np.argpartition(-accumulated_scores, nbest, axis=None)
         indices = np.unravel_index(
             flat_indices[:nbest], accumulated_scores.shape)
@@ -140,8 +150,16 @@ class Decoder:
                 Prediction(
                     token_id=token_id,
                     score=accumulated_scores[hypo_index, token_id],
-                    parent_hypothesis=hypos[hypo_index]))
-        return predictions
+                    parent_hypothesis=unfinished_hypos[hypo_index]))
+        # Add finished hypos
+        for hypo in hypos:
+            if hypo.is_finished():
+                predictions.append(
+                    Prediction(
+                        token_id=None, score=hypo.score,
+                        parent_hypothesis=hypo))
+        predictions.sort(key=lambda p: -p.score)
+        return predictions[:nbest]
 
     def add_predictor(self, predictor: Predictor) -> None:
         self._predictors.append(predictor)

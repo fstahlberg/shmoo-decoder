@@ -25,6 +25,7 @@ def main(argv):
     all_output_features = shmoo_decoder.decode_raw(
         "Why is it rare to discover new marine mammal species?")
     for index, output_features in enumerate(all_output_features):
+        print("\n%d. BEST OUTPUT" % (index + 1,))
         for key, val in sorted(output_features.items()):
             print("%s: %s" % (key, val))
 
