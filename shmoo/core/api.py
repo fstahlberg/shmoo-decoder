@@ -1,4 +1,4 @@
-from typing import Any, Dict, Sequence, Tuple
+from typing import Any, Dict, Sequence, Tuple, Union
 
 from shmoo import prepostprocessing, decoders, predictors
 
@@ -18,26 +18,28 @@ class Shmoo:
         self._postprocessors = []
         self._decoder = None
 
-    def set_up(self, preprocessor_specs: Sequence[str], decoder_spec: str,
-               predictor_specs: Sequence[str],
-               postprocessor_specs: Sequence[str]) -> None:
-        for spec in preprocessor_specs:
-            name, config = _split_spec(spec)
+    def set_up(self, config: Dict[str, Any]) -> None:
+
+        # Assumption: There can only be one decoder
+        self._decoder = decoders.setup_decoder(list(config["decoder"].keys())[0], config)
+
+        self._decoder.add_predictor(
+                predictors.setup_predictor(config["framework"], config)
+        )
+
+        for preprocessor in config["preprocessors"]:
+            # preprocessor is a str if no parameters are specified
             self._preprocessors.append(
-                prepostprocessing.setup_processor(name, config))
+                prepostprocessing.setup_processor(preprocessor if type(preprocessor) == str else list(preprocessor.keys())[0],
+                                                  config)
+            )
 
-        decoder_name, decoder_config = _split_spec(decoder_spec)
-        self._decoder = decoders.setup_decoder(decoder_name, decoder_config)
-
-        for spec in predictor_specs:
-            name, config = _split_spec(spec)
-            self._decoder.add_predictor(
-                predictors.setup_predictor(name, config))
-
-        for spec in postprocessor_specs:
-            name, config = _split_spec(spec)
+        for postprocessor in config["postprocessors"]:
+            # postprocessor is a str if no parameters are specified
             self._postprocessors.append(
-                prepostprocessing.setup_processor(name, config))
+                prepostprocessing.setup_processor(postprocessor if type(postprocessor) == str else list(postprocessor.keys())[0],
+                                                  config)
+            )
 
     def decode_raw(self, raw: Any) -> Sequence[Dict[str, Any]]:
         return self.decode_features({"input_raw": raw})

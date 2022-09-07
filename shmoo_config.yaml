@@ -1,0 +1,12 @@
+model_dir: ../fairseq_model/wmt14.en-fr.fconv-py
+src_lang: en
+trg_lang: fr
+framework: fairseq
+decoder: 
+   GreedyDecoder:
+preprocessors:
+   - FairseqBPEPreprocessor
+postprocessors:
+   - RemoveEOSPostprocessor
+   - FairseqBPEPostprocessor
+   - FairseqTokenizerPostprocessor
