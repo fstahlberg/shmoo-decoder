@@ -5,7 +5,7 @@ import sys
 import os
 import pickle
 
-from shmoo.core.interface import Preprocessor
+from shmoo.core.interface import Preprocessor, Postprocessor, Processor
 from shmoo.prepostprocessing import register_processor
 
 try:
@@ -16,9 +16,9 @@ except ImportError:
 else:
     logging.info("ESPnet imports successful.")
 
-@register_processor("ESPnetProcessor")
-class ESPnetPreprocessor(Preprocessor):
 
+# @register_processor("ESPnetProcessor")
+class ESPnetProcessor(Processor):
     def __init__(self, config_file: str):
         """
 
@@ -49,8 +49,12 @@ class ESPnetPreprocessor(Preprocessor):
 
         print("- Checking config yaml")
 
-        for key in ['train_data_path_and_name_and_type', 'token_list',
-                    'token_type', 'model']:
+        for key in [
+            "train_data_path_and_name_and_type",
+            "token_list",
+            "token_type",
+            "model",
+        ]:
 
             if key == "train_data_path_and_name_and_type":
                 _, input_type, input_format = self.config[key][0]
@@ -60,35 +64,39 @@ class ESPnetPreprocessor(Preprocessor):
                         self.input_format = input_format
                     else:
                         print(
-                            f"Input format_type {input_format} not supported yet. Currently support kaldi_ark formatted features or raw audio/sound.",
-                            file=sys.stderr)
+                            f"Input format_type {input_format} not supported yet. Currently supports kaldi_ark formatted features or raw audio/sound.",
+                            file=sys.stderr,
+                        )
                         raise NotImplementedError
                 print("  - Input modaility:", input_type)
                 print("  - Input format   :", input_format)
 
             if key == "model":
-                key = self.config['token_type'] + "model"
+                key = self.config["token_type"] + "model"
                 if os.path.exists(self.config[key]):
                     self.tokenizer_model_file = self.config[key]
                 else:
                     print(
-                        f"Error: Cannot find {key} file at", self.config[key],
-                        file=sys.stderr)
+                        f"Error: Cannot find {key} file at",
+                        self.config[key],
+                        file=sys.stderr,
+                    )
                     raise FileNotFoundError(self.config[key])
 
             if key not in self.config:
                 print(
                     f"Error: {key} is expected to be found in ESPnet config file",
-                    self.config_file, file=sys.stderr
+                    self.config_file,
+                    file=sys.stderr,
                 )
                 raise KeyError
 
             else:
-                print("  -", key, u'\u2713')
+                print("  -", key, "\u2713")
 
     def set_up(self):
 
-        for i, tok in enumerate(self.config['token_list']):
+        for i, tok in enumerate(self.config["token_list"]):
             self.token2int[tok] = i
             self.int2token[i] = tok
         print("- Loaded token2int.")
@@ -105,18 +113,26 @@ class ESPnetPreprocessor(Preprocessor):
 
         else:
             # Load tokenizer model (eg: spm or char tokenizer or ..)
-            with open(self.tokenizer_model_file, 'rb') as fpr:
+            with open(self.tokenizer_model_file, "rb") as fpr:
                 self.tokenizer_model = pickle.load(fpr)
 
+
+@register_processor("ESPnetPreProcessor")
+class ESPnetPreprocessor(Preprocessor, ESPnetProcessor):
+    def __init__(self, config_file):
+
+        super().__init__(config_file)
+
     def process(self, features: Dict[str, Any]) -> None:
-        """Tokenize text from `input_raw` and save the ids as values for `input_ids` """
+        """Tokenize text from `input_raw` and save the ids as values for `input_ids`"""
 
         if self.input_type == "text":
-            if self.config['token_type'] == 'bpe':
-                features['input_ids'] = [
+            if self.config["token_type"] == "bpe":
+                features["input_ids"] = [
                     self.token2int[tok]
-                    for tok in
-                    self.tokenizer_model.EncodeAsPieces(features['input_raw'])
+                    for tok in self.tokenizer_model.EncodeAsPieces(
+                        features["input_raw"]
+                    )
                 ]
                 print(features["input_raw"], features["input_ids"])
             else:
@@ -127,8 +143,8 @@ class ESPnetPreprocessor(Preprocessor):
 
                 try:
                     import kaldiio
-                    features["input_ids"] = kaldiio.load_mat(
-                        features['input_raw'])
+
+                    features["input_ids"] = kaldiio.load_mat(features["input_raw"])
 
                     print(features["input_raw"], features["input_ids"].shape)
 
@@ -138,8 +154,25 @@ class ESPnetPreprocessor(Preprocessor):
             elif self.input_format == "sound":
                 try:
                     import soundfile
-                except ModuleNotFoundError:
-                    pass
+                except ImportError:
+                    logging.info("soundfile not found. pip install soundfile")
 
             else:
                 raise NotImplementedError
+
+
+@register_processor("ESPnetPostprocessor")
+class ESPnetPostprocessor(Postprocessor, ESPnetProcessor):
+    def __init__(self, config_file: str):
+
+        super().__init__(config_file)
+
+    def process(self, features: Dict[str, Any]) -> None:
+        """Post process bpe IDs to sequence of tokens"""
+
+        if self.config["token_type"] == "bpe":
+
+            features["output_bpe"] = [self.int2token[i] for i in features["output_ids"]]
+            features["output_raw"] = self.tokenizer_model.DecodePieces(
+                features["output_bpe"]
+            )
