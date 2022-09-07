@@ -51,7 +51,7 @@ class FairseqPredictor(Predictor):
         self.device = torch.device("cpu")
         task, args = utils.make_fairseq_task(input_args)
         self.src_vocab_size = len(task.source_dictionary)
-        self.bos_index = task.source_dictionary.bos_index
+        self.bos_index = task.target_dictionary.bos_index
         self.model = self._build_ensemble(model_path, task)
         self.encoder_outs = None
 
