@@ -15,6 +15,8 @@ FAIRSEQ_INITIALIZED = False
 
 DEFAULT_EOS_ID = 2
 DEFAULT_BEAM_SIZE = 4
+DEFAULT_NUM_SAMPLES = 5
+DEFAULT_SEED = 1
 
 def _initialize_fairseq(user_dir):
     global FAIRSEQ_INITIALIZED
