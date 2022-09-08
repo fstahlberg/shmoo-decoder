@@ -1,3 +1,5 @@
+"""Basic pre- and postprocessors without third party dependencies."""
+
 from typing import Any, Dict
 
 from shmoo.core import utils
