@@ -1,3 +1,11 @@
+"""Main interfaces and base classes.
+
+This module contains the main building blocks of the Shmoo framework. Details
+about how these classes work together can be found here:
+    https://github.com/fstahlberg/shmoo-decoder#software-design
+"""
+
+from collections import OrderedDict
 import copy
 from typing import Any, Dict, Sequence
 import numpy as np
@@ -6,6 +14,7 @@ from shmoo.core import utils
 
 
 class Hypothesis:
+    """A (partial) hypothesis."""
 
     def __init__(self, states: Sequence[Dict[str, Any]], score: float,
                  output_features: Dict[str, Any]):
@@ -22,6 +31,8 @@ class Hypothesis:
 
 
 class Prediction:
+    """An expansion to a partial hypothesis by a single token."""
+
     def __init__(self, token_id: int, score: float,
                  parent_hypothesis: Hypothesis):
         self.token_id = token_id
@@ -34,9 +45,11 @@ class Prediction:
 
 
 class Predictor:
+    """A scoring module that defines token-level scores based on its state."""
 
     @classmethod
     def setup_predictor(cls, config):
+        """Factory function for predictors."""
         return cls(config)
 
     def __init__(self, config):
@@ -62,9 +75,11 @@ class Predictor:
 
 
 class Processor:
+    """Base class for preprocessors and postprocessors."""
 
     @classmethod
     def setup_processor(cls, config):
+        """Factory function for processors."""
         return cls(config)
 
     def __init__(self, config):
@@ -83,9 +98,11 @@ class Postprocessor(Processor):
 
 
 class Decoder:
+    """A decoding strategy."""
 
     @classmethod
     def setup_decoder(cls, config):
+        """Factory function for decoders."""
         return cls(config)
 
     def __init__(self, config):
@@ -147,6 +164,9 @@ class Decoder:
             if self.is_finished(hypo):
                 hypo.output_features.update(input_features)
                 hypo.output_features["score"] = hypo.score
+                hypo.output_features["output"] = OrderedDict(
+                    {"output": hypo.output_features["output_ids"]})
+                del hypo.output_features["output_ids"]
                 all_output_features.append(hypo.output_features)
         return all_output_features
 

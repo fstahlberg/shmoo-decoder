@@ -1,3 +1,5 @@
+"""This module contains all predictors supported by Shmoo."""
+
 import os
 
 from shmoo.core import import_classes
@@ -8,7 +10,8 @@ PREDICTOR_REGISTRY = {}
 PREDICTOR_CLASS_NAMES = set()
 
 
-def setup_predictor(predictor_name, config):
+def setup_predictor(predictor_name: str, config) -> Predictor:
+    """Looks up `predictor_name` and calls it's `setup_predictor(config)`."""
 
     if isinstance(predictor_name, str):
         predictor = PREDICTOR_REGISTRY[predictor_name]
@@ -18,8 +21,9 @@ def setup_predictor(predictor_name, config):
     return predictor.setup_predictor(config)
 
 
-def register_predictor(name):
-    """
+def register_predictor(name: str):
+    """Adds a new predictor to the registry.
+
     New predictors can be added to shmoo with the
     :func:`~shmoo.predictors.register_predictor` function decorator.
     For example::
@@ -29,16 +33,19 @@ def register_predictor(name):
     .. note::
         All Predictors must implement the :class:`~shmoo.interface.Predictor`
         interface.
+
     Args:
         name (str): the name of the framework
     """
 
     def register_predictor_cls(cls):
         if name in PREDICTOR_REGISTRY:
-            raise ValueError("Cannot register duplicate predictor ({})".format(name))
+            raise ValueError(
+                "Cannot register duplicate predictor ({})".format(name))
         if not issubclass(cls, Predictor):
             raise ValueError(
-                "Predictors ({}: {}) must extend the Predictor interface".format(name, cls.__name__)
+                "Predictors ({}: {}) must extend the Predictor interface".format(
+                    name, cls.__name__)
             )
         if cls.__name__ in PREDICTOR_CLASS_NAMES:
             raise ValueError(

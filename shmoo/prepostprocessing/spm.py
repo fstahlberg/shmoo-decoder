@@ -1,6 +1,7 @@
 from absl import logging
 from typing import Any, Dict
 
+from shmoo.core import utils
 from shmoo.core.interface import Postprocessor
 from shmoo.core.interface import Preprocessor
 from shmoo.prepostprocessing import register_processor
@@ -21,15 +22,17 @@ class SPMPreprocessor(Preprocessor):
         self._spm = spm.SentencePieceProcessor(model_file=config["spm_path"])
 
     def process(self, features: Dict[str, Any]) -> None:
-        features["input_ids"] = self._spm.encode(features["input_raw"])
+        features["input"]["ids"] = self._spm.encode(
+            utils.get_last_item(features["input"])[1])
 
 
 @register_processor("SPMPostprocessor")
 class SPMPostprocessor(Postprocessor):
 
-    def __init__(self, spm_path: str):
+    def __init__(self, config):
         super().__init__(config)
-        self._spm = spm.SentencePieceProcessor(model_file=spm_path)
+        self._spm = spm.SentencePieceProcessor(model_file=config["spm_path"])
 
     def process(self, features: Dict[str, Any]) -> None:
-        features["output_raw"] = self._spm.decode([features["output_ids"]])[0]
+        features["output"]["raw"] = self._spm.decode(
+            [utils.get_last_item(features["output"])[1]])[0]
