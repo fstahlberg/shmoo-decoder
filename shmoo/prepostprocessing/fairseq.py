@@ -79,3 +79,38 @@ class FairseqBPEPostprocessor(Postprocessor):
                        features["output_ids"]]
         features["output_bpe"] = " ".join(bpe_symbols)
         features["output_raw"] = self._bpe.decode(features["output_bpe"])
+
+
+@register_processor("FairseqSplitPreprocessor")
+class FairseqSplitPreprocessor(Preprocessor):
+    """Simply splits the string and maps to ids"""
+
+    def __init__(self, config):
+        super().__init__(config)
+        task, args = utils.make_fairseq_task(
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
+             config['fairseq']['trg_lang']])
+        self._src_dict = task.src_dict
+
+    def process(self, features: Dict[str, Any]) -> None:
+        features["input_ids"] = self._src_dict.encode_line(
+            features["input_raw"])
+
+
+@register_processor("FairseqSplitPostprocessor")
+class FairseqSplitPostprocessor(Postprocessor):
+
+    def __init__(self, config):
+        super().__init__(config)
+        task, args = utils.make_fairseq_task(
+            [config['fairseq']['model_dir'],
+             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
+             config['fairseq']['trg_lang']])
+        self._tgt_dict = task.tgt_dict
+
+    def process(self, features: Dict[str, Any]) -> None:
+         # convert from output_ids to "raw" output, meaning a string
+        output_symbols = [self._tgt_dict[token_id] for token_id in
+                          features["output_ids"]]
+        features["output_raw"] = " ".join(output_symbols)
