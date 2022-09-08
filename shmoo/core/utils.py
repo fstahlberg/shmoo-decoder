@@ -28,6 +28,10 @@ def _initialize_fairseq(user_dir):
         FAIRSEQ_INITIALIZED = True
 
 
+def get_from_decoder_config(config, argument, default):
+    return config.get('decoder_config', {}).get(argument, default)
+
+
 def make_fairseq_task(input_args):
     parser = options.get_generation_parser()
     args = options.parse_args_and_arch(parser, input_args)
