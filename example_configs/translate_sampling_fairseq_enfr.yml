@@ -1,0 +1,17 @@
+fairseq:
+   model_dir: ../fairseq_model/wmt14.en-fr.fconv-py
+   src_lang: en
+   trg_lang: fr
+   bpe: subword_nmt
+   tokenizer: moses
+framework: fairseq
+decoder: SamplingDecoder
+decoder_config:
+   samples: 6
+preprocessors:
+   - FairseqTokenizerPreprocessor
+   - FairseqBPEPreprocessor
+postprocessors:
+   - RemoveEOSPostprocessor
+   - FairseqBPEPostprocessor
+   - FairseqTokenizerPostprocessor
