@@ -4,6 +4,7 @@ import numpy as np
 
 from shmoo.core import utils
 
+
 class Hypothesis:
 
     def __init__(self, states: Sequence[Dict[str, Any]], score: float,
@@ -38,6 +39,9 @@ class Predictor:
     def setup_predictor(cls, config):
         return cls(config)
 
+    def __init__(self, config):
+        pass
+
     def initialize_state(
             self, input_features: Dict[str, Any]) -> Dict[str, Any]:
         pass
@@ -62,6 +66,9 @@ class Processor:
     @classmethod
     def setup_processor(cls, config):
         return cls(config)
+
+    def __init__(self, config):
+        pass
 
     def process(self, features: Dict[str, Any]) -> None:
         pass
@@ -148,7 +155,8 @@ class Decoder:
             hypos: Sequence[Hypothesis],
             nbest: int) -> Sequence[Prediction]:
         accumulated_scores = 0.0
-        unfinished_hypos = [hypo for hypo in hypos if not self.is_finished(hypo)]
+        unfinished_hypos = [hypo for hypo in hypos if
+                            not self.is_finished(hypo)]
         for index, predictor in enumerate(self._predictors):
             predictor_states = [hypo.states[index] for hypo in unfinished_hypos]
             accumulated_scores += predictor.predict_next(predictor_states)

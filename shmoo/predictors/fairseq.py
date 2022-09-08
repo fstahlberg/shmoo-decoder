@@ -43,6 +43,7 @@ class FairseqPredictor(Predictor):
         Check https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
         for an idea of how the model can actually be loaded
         """
+        super().__init__(config)
         model_path = f"{config['fairseq']['model_dir']}/model.pt"
         input_args = [config['fairseq']['model_dir'],
                       "--path", model_path,

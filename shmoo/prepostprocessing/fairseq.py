@@ -10,6 +10,7 @@ from shmoo.prepostprocessing import register_processor
 class FairseqTokenizerPreprocessor(Preprocessor):
 
     def __init__(self, config):
+        super().__init__(config)
         task, args = utils.make_fairseq_task(
             [config['fairseq']['model_dir'],
              '--source-lang', config['fairseq']["src_lang"], "--target-lang",
@@ -26,6 +27,7 @@ class FairseqTokenizerPreprocessor(Preprocessor):
 class FairseqTokenizerPostprocessor(Postprocessor):
 
     def __init__(self, config):
+        super().__init__(config)
         task, args = utils.make_fairseq_task(
             [config['fairseq']['model_dir'],
              '--source-lang', config['fairseq']["src_lang"], '--target-lang',
@@ -42,6 +44,7 @@ class FairseqTokenizerPostprocessor(Postprocessor):
 class FairseqBPEPreprocessor(Preprocessor):
 
     def __init__(self, config):
+        super().__init__(config)
         task, args = utils.make_fairseq_task(
             [config['fairseq']['model_dir'],
              '--source-lang', config['fairseq']['src_lang'], '--target-lang',
@@ -61,6 +64,7 @@ class FairseqBPEPreprocessor(Preprocessor):
 class FairseqBPEPostprocessor(Postprocessor):
 
     def __init__(self, config):
+        super().__init__(config)
         task, args = utils.make_fairseq_task(
             [config['fairseq']['model_dir'],
              '--source-lang', config['fairseq']['src_lang'], '--target-lang',

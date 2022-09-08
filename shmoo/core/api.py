@@ -1,15 +1,15 @@
-from typing import Any, Dict, Sequence, Tuple, Union
+from absl import logging
+from typing import Any, Dict, Sequence
 
 from shmoo import prepostprocessing, decoders, predictors
 
-
-def _split_spec(spec: str) -> Tuple[str, str]:
-    try:
-        name, config = spec.split(":", 1)
-    except ValueError:
-        name = spec
-        config = ""
-    return name, config
+try:
+    from ruamel.yaml import YAML
+    from pathlib import Path
+except ImportError:
+    logging.info("YAML configuration not available.")
+else:
+    logging.info("YAML imports successful.")
 
 
 class Shmoo:
@@ -45,6 +45,13 @@ class Shmoo:
                     list(postprocessor.keys())[0],
                     config)
             )
+
+    def set_up_with_yaml(self, config_path: str) -> None:
+        # Parse config file
+        yaml = YAML(typ='safe')
+        config = yaml.load(Path(config_path))
+        logging.info("Loaded YAML config from %s: %s", config_path, config)
+        self.set_up(config)
 
     def decode_raw(self, raw: Any) -> Sequence[Dict[str, Any]]:
         return self.decode_features({"input_raw": raw})

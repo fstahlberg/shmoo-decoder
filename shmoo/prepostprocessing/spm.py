@@ -16,17 +16,19 @@ else:
 @register_processor("SPMPreprocessor")
 class SPMPreprocessor(Preprocessor):
 
-    def __init__(self, spm_path: str):
-        self._spm = spm.SentencePieceProcessor(model_file=spm_path)
+    def __init__(self, config):
+        super().__init__(config)
+        self._spm = spm.SentencePieceProcessor(model_file=config["spm_path"])
 
     def process(self, features: Dict[str, Any]) -> None:
-        features["input_ids"] = self._spm.encode(features['input_raw'])
+        features["input_ids"] = self._spm.encode(features["input_raw"])
 
 
 @register_processor("SPMPostprocessor")
 class SPMPostprocessor(Postprocessor):
 
     def __init__(self, spm_path: str):
+        super().__init__(config)
         self._spm = spm.SentencePieceProcessor(model_file=spm_path)
 
     def process(self, features: Dict[str, Any]) -> None:
