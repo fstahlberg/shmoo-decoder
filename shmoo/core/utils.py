@@ -23,10 +23,17 @@ DEFAULT_EOS_ID = 2
 # Beam size used if beam_size is not set in the config.
 DEFAULT_BEAM_SIZE = 4
 
+# Sampling hyperparameters
+DEFAULT_SAMPLING_STRATEGY = "nucleus"
+
 # Default number of samples used in sampling-based decoders.
 DEFAULT_NUM_SAMPLES = 5
 
 DEFAULT_SEED = 1
+DEFAULT_TEMPERATURE = 1
+DEFAULT_TOP_K = 10
+DEFAULT_NUCLEUS_P = 0.8
+DEFAULT_TYPICAL_P = 0.8
 
 
 def _initialize_fairseq(user_dir: str) -> None:
@@ -42,6 +49,12 @@ def _initialize_fairseq(user_dir: str) -> None:
             args = type("", (), {"user_dir": user_dir})()
             fairseq_utils.import_user_module(args)
         FAIRSEQ_INITIALIZED = True
+
+
+def get_from_decoder_config(config, argument, default):
+    param = config.get('decoder_config', {}).get(argument, default)
+    logging.info(f"{argument}: {param}")
+    return param
 
 
 def make_fairseq_task(input_args: Sequence[str]) -> Tuple[Any, Any]:

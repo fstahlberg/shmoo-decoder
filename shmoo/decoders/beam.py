@@ -1,3 +1,4 @@
+from absl import logging
 from typing import Any, Dict, Sequence
 
 from shmoo.core.interface import Decoder
@@ -11,10 +12,9 @@ class BeamDecoder(Decoder):
     def __init__(self, config):
         super().__init__(config)
         self._finished_criterion = self.all_hypos_finished
-        try:
-            self.beam_size = config["decoder_config"]["beam_size"]
-        except KeyError:
-            self.beam_size = utils.DEFAULT_BEAM_SIZE
+        self.beam_size = utils.get_from_decoder_config(config, 'beam_size', utils.DEFAULT_BEAM_SIZE)
+        logging.info(f"Beam Search Decoder successfully initialized.")
+        logging.info(f"Beam size: {self.beam_size}")
 
     def process(
             self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:

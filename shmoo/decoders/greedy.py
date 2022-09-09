@@ -1,3 +1,4 @@
+from absl import logging
 from typing import Any, Dict, Sequence
 
 from shmoo.core.interface import Decoder
@@ -6,6 +7,10 @@ from shmoo.decoders import register_decoder
 
 @register_decoder("GreedyDecoder")
 class GreedyDecoder(Decoder):
+
+    def __init__(self, config):
+        super().__init__(config)
+        logging.info(f"Greedy Decoder successfully initialized.")
 
     def process(
             self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:

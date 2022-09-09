@@ -7,9 +7,8 @@ about how these classes work together can be found here:
 
 from collections import OrderedDict
 import copy
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Sequence, Callable
 import numpy as np
-from scipy.special import softmax
 
 from shmoo.core import utils
 
@@ -244,11 +243,11 @@ class Decoder:
     def get_position_scores(
             self,
             hypos: Sequence[Hypothesis]) -> np.ndarray:
-        accumulated_scores = 0.0
+        pos_scores = 0.0
         for index, predictor in enumerate(self._predictors):
             predictor_states = [hypo.states[index] for hypo in hypos]
-            accumulated_scores += predictor.predict_next(predictor_states)
-        return accumulated_scores
+            pos_scores += predictor.predict_next(predictor_states)
+        return pos_scores
 
     def complete_finished_hypothesis(
             self,
@@ -259,18 +258,19 @@ class Decoder:
                 predictions.append(
                     Prediction(
                         token_id=None, score=hypo.score,
-                        parent_hypothesis=hypo))
+                        parent_hypothesis=hypo
+                    )
+                )
         return predictions
 
     def get_predictions(
             self,
             hypos: Sequence[Hypothesis],
             nbest: int) -> Sequence[Prediction]:
-        unfinished_hypos = [hypo for hypo in hypos if
-                            not self.is_finished(hypo)]
-        accumulated_scores = self.get_position_scores(hypos=unfinished_hypos)
+        unfinished_hypos = [hypo for hypo in hypos if not self.is_finished(hypo)]
+        pos_scores = self.get_position_scores(hypos=unfinished_hypos)
         base_scores = [hypo.score for hypo in unfinished_hypos]
-        accumulated_scores += np.expand_dims(base_scores, 1)
+        accumulated_scores = pos_scores + np.expand_dims(base_scores, 1)
         flat_indices = np.argpartition(-accumulated_scores, nbest, axis=None)
         indices = np.unravel_index(
             flat_indices[:nbest], accumulated_scores.shape)
@@ -289,14 +289,14 @@ class Decoder:
     def sample_predictions(
             self,
             hypos: Sequence[Hypothesis],
-            seed: int) -> Sequence[Prediction]:
+            seed: int,
+            make_probs: Callable) -> Sequence[Prediction]:
 
-        unfinished_hypos = [hypo for hypo in hypos if
-                            not self.is_finished(hypo)]
-        accumulated_scores = self.get_position_scores(hypos=unfinished_hypos)
+        unfinished_hypos = [hypo for hypo in hypos if not self.is_finished(hypo)]
+        pos_scores = self.get_position_scores(hypos=unfinished_hypos)
         base_scores = [hypo.score for hypo in unfinished_hypos]
 
-        num_unfinished_hypos, vocab_size = accumulated_scores.shape
+        num_unfinished_hypos, vocab_size = pos_scores.shape
         predictions = []
         # Not compatible with batches yet
         for sample_id in range(num_unfinished_hypos):
@@ -305,13 +305,12 @@ class Decoder:
             sampled_token_id = np.random.choice(
                 a=[i for i in range(vocab_size)],
                 size=1,
-                p=softmax(accumulated_scores[sample_id, :]),
+                p=make_probs(pos_scores[sample_id,:]), # pos_scores[sample_id,:] needs to be 1-dimensional array
             )
             predictions.append(
                 Prediction(
                     token_id=int(sampled_token_id),
-                    score=accumulated_scores[sample_id, int(sampled_token_id)] +
-                          base_scores[sample_id],
+                    score=pos_scores[sample_id, int(sampled_token_id)] + base_scores[sample_id],
                     parent_hypothesis=unfinished_hypos[sample_id])
             )
         predictions = self.complete_finished_hypothesis(
