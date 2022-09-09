@@ -9,6 +9,7 @@ from shmoo.core import utils
 from shmoo.core.interface import Decoder
 from shmoo.decoders import register_decoder
 
+
 @register_decoder("SamplingDecoder")
 class SamplingDecoder(Decoder):
 

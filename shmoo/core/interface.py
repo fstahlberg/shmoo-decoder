@@ -1,3 +1,11 @@
+"""Main interfaces and base classes.
+
+This module contains the main building blocks of the Shmoo framework. Details
+about how these classes work together can be found here:
+    https://github.com/fstahlberg/shmoo-decoder#software-design
+"""
+
+from collections import OrderedDict
 import copy
 from typing import Any, Dict, Sequence, Callable
 import numpy as np
@@ -6,6 +14,7 @@ from shmoo.core import utils
 
 
 class Hypothesis:
+    """A (partial) hypothesis."""
 
     def __init__(self, states: Sequence[Dict[str, Any]], score: float,
                  output_features: Dict[str, Any]):
@@ -22,6 +31,8 @@ class Hypothesis:
 
 
 class Prediction:
+    """An expansion of a partial hypothesis by a single token."""
+
     def __init__(self, token_id: int, score: float,
                  parent_hypothesis: Hypothesis):
         self.token_id = token_id
@@ -34,9 +45,18 @@ class Prediction:
 
 
 class Predictor:
+    """A scoring module that defines token-level scores based on its state.
+
+    Predictors are left-to-right scoring modules that assign scores to each
+    entry in the vocabulary given the internal predictor state. The predictor
+    state is a Python dictionary that is specific to a hypothesis, and may
+    store information such as the target side translation prefix for partial
+    hypotheses.
+    """
 
     @classmethod
     def setup_predictor(cls, config):
+        """Factory function for predictors."""
         return cls(config)
 
     def __init__(self, config):
@@ -44,11 +64,37 @@ class Predictor:
 
     def initialize_state(
             self, input_features: Dict[str, Any]) -> Dict[str, Any]:
+        """Builds the initial predictor state.
+
+        Args:
+            input_features: Input feature dictionary.
+
+        Returns:
+            The initial predictor state `initial_state`. The token-level scores
+            at time step 0 are given by `predict_next(initial_state)`.
+        """
         pass
 
     def update_single_state(self, state: Dict[str, Any],
                             prediction: Prediction,
                             lazy: bool = False) -> Dict[str, Any]:
+        """Updates a predictor state given a Prediction.
+
+        This method is called when the Decoder expands a hypothesis. Predictors
+        may implement this function in two different modes. If lazy is False,
+        the `state` input directory is left unmodified, and a new state is
+        returned. If lazy is true, `state` may be modified in-place and then
+        returned. Decoders may use `lazy=true` if the parent hypothesis is not
+        used with any other `Prediction`s to expand to other hypotheses.
+
+        Args:
+            state: Current predictor state
+            prediction: A single prediction for the next timestep.
+            lazy: Whether `state` may be modified in-place.
+
+        Returns:
+            The updated predictor state.
+        """
         return state
 
     def predict_next(self, states: Sequence[Dict[str, Any]]):
@@ -60,31 +106,59 @@ class Predictor:
     def predict_next_single(self, state: Dict[str, Any]):
         pass
 
+
 class Processor:
+    """Base class for preprocessors and postprocessors."""
 
     @classmethod
     def setup_processor(cls, config):
+        """Factory function for processors."""
         return cls(config)
 
     def __init__(self, config):
         pass
 
     def process(self, features: Dict[str, Any]) -> None:
+        """Processes a single feature dictionary.
+
+        Args:
+            features: Feature dictionary passed through from the previous
+                processor. Features are modified in-place in the dictionary.
+        """
         pass
 
 
 class Preprocessor(Processor):
+    """Base class for Preprocessors.
+
+    Preprocessors modify the feature dictionary prior to running the Decoder.
+    Subclasses must implement process().
+    """
     pass
 
 
 class Postprocessor(Processor):
-    pass
+    """Base class for Postprocessors.
+
+    Postprocessors modify the feature dictionaries returned by the Decoder.
+    Subclasses must implement either process_all() (processing all
+    returned feature dictionaries at once) or process() (processing each
+    feature dictionary separately).
+    """
+
+    def process_all(
+            self, all_features: Sequence[Dict[str, Any]]) -> None:
+        """Processes all feature returned by the Decoder."""
+        for features in all_features:
+            self.process(features)
 
 
 class Decoder:
+    """A decoding strategy."""
 
     @classmethod
     def setup_decoder(cls, config):
+        """Factory function for decoders."""
         return cls(config)
 
     def __init__(self, config):
@@ -95,21 +169,35 @@ class Decoder:
         self._predictors = []
 
     def is_finished(self, hypo: Hypothesis) -> bool:
+        """Returns true if the last output ID is equal to end-of-sentence."""
         try:
             return hypo.output_features["output_ids"][-1] == self.eos_id
         except IndexError:
             return False
 
     def best_hypo_finished(self, hypos: Sequence[Hypothesis]) -> bool:
+        """Returns true if the first hypothesis in `hypos` is finished."""
         if hypos:
             return self.is_finished(hypos[0])
         return True
 
     def all_hypos_finished(self, hypos: Sequence[Hypothesis]) -> bool:
+        """Returns true if all hypotheses in `hypos` are finished."""
         return all(self.is_finished(hypo) for hypo in hypos)
 
     def make_initial_hypothesis(
             self, input_features: Dict[str, Any]) -> Hypothesis:
+        """Builds the initial `Hypothesis`.
+
+        Iterates through all predictors and calls initialize_state() to build
+        the initial predictor states.
+
+        Args:
+            input_features: Input feature dictionary.
+
+        Returns:
+            The initial `Hypothesis` for timestep 0.
+        """
         states = [predictor.initialize_state(input_features)
                   for predictor in self._predictors]
         return Hypothesis(
@@ -146,6 +234,9 @@ class Decoder:
             if self.is_finished(hypo):
                 hypo.output_features.update(input_features)
                 hypo.output_features["score"] = hypo.score
+                hypo.output_features["output"] = OrderedDict(
+                    {"output": hypo.output_features["output_ids"]})
+                del hypo.output_features["output_ids"]
                 all_output_features.append(hypo.output_features)
         return all_output_features
 
@@ -190,7 +281,8 @@ class Decoder:
                     token_id=token_id,
                     score=accumulated_scores[hypo_index, token_id],
                     parent_hypothesis=unfinished_hypos[hypo_index]))
-        predictions = self.complete_finished_hypothesis(hypos=hypos, predictions=predictions)
+        predictions = self.complete_finished_hypothesis(
+            hypos=hypos, predictions=predictions)
         predictions.sort(key=lambda p: -p.score)
         return predictions[:nbest]
 
@@ -221,12 +313,29 @@ class Decoder:
                     score=pos_scores[sample_id, int(sampled_token_id)] + base_scores[sample_id],
                     parent_hypothesis=unfinished_hypos[sample_id])
             )
-        predictions = self.complete_finished_hypothesis(hypos=hypos, predictions=predictions)
+        predictions = self.complete_finished_hypothesis(
+            hypos=hypos, predictions=predictions)
         return predictions
 
     def add_predictor(self, predictor: Predictor) -> None:
+        """Adds a predictor to the scoring pipeline."""
         self._predictors.append(predictor)
 
     def decode(
             self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
-        pass
+        """Runs decoding on a single sentence.
+
+        Subclasses must implement this method. This is the main entry point to
+        the Decoder. The decoding task is defined by the decoder config, the
+        predictors, and the `input_features`. This method must return a list of
+        output feature dictionaries, each corresponding to a complete
+        (translation) hypotheses.
+
+        Args:
+            input_features: Input feature dictionary
+
+        Returns:
+            A sorted list of translation hypotheses, represented by output
+            feature dictionaries.
+        """
+        raise NotImplementedError("Decoding strategy is not implemented.")

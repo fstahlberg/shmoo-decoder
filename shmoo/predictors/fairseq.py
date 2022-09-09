@@ -85,7 +85,8 @@ class FairseqPredictor(Predictor):
         )
 
         # tensorize src
-        src_sentence = [token_id for token_id in input_features["input_ids"]]
+        src_sentence = [token_id for token_id in
+                        utils.get_last_item(input_features["input"])[1]]
         src_tokens = torch.LongTensor(
             [src_sentence], device=self.device)
         src_lengths = torch.LongTensor(
