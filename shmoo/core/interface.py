@@ -381,3 +381,24 @@ class Decoder:
             feature dictionaries.
         """
         raise NotImplementedError("Decoding strategy is not implemented.")
+
+
+class Metric:
+    """Base class for metrics."""
+
+    @classmethod
+    def setup_metric(cls, config):
+        """Factory function for metrics."""
+        return cls(config)
+
+    def __init__(self, config):
+        pass
+
+    def score(self, hypothesis: str, reference: str) -> float:
+        """Computes the value of a metric for a hypothesis and a reference."""
+        pass
+
+    def score_all(self, hypotheses: Sequence[str], references: Sequence[str]) -> float:
+        """Scores a list of hypotheses."""
+        for hypothesis, reference in zip(hypotheses, references):
+            self.score(hypothesis, reference)
