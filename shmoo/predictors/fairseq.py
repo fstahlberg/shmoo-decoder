@@ -1,16 +1,15 @@
-"""
+"""Predictor for scoring with fairseq models.
 
-This is the interface to the fairseq library.
+This is the main interface to scoring with the fairseq library.
 
 https://github.com/pytorch/fairseq
 
-It is based on the fairseq predictor for SGNMT from
+The predictor is based on the fairseq predictor for SGNMT from
 https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
 """
 
 from absl import logging
 import copy
-import os
 from typing import Dict, List, Optional, Any
 
 from shmoo.core.interface import Predictor
@@ -43,16 +42,13 @@ class FairseqPredictor(Predictor):
         Check https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
         for an idea of how the model can actually be loaded
         """
-        model_path = f"{config['fairseq']['model_dir']}/model.pt"
-        input_args = [config['fairseq']['model_dir'],
-                      "--path", model_path,
-                      "--source-lang", config['fairseq']["src_lang"],
-                      "--target-lang", config['fairseq']["trg_lang"]]
+        super().__init__(config)
         self.device = torch.device("cpu")
-        task, args = utils.make_fairseq_task(input_args)
+        task, args = utils.make_fairseq_task(config['fairseq'])
         self.src_vocab_size = len(task.source_dictionary)
         self.bos_index = task.target_dictionary.bos_index
-        self.model = self._build_ensemble(model_path, task)
+        self.model = self._build_ensemble(
+            f"{config['fairseq']['model_dir']}/model.pt", task)
         self.encoder_outs = None
 
     def _build_ensemble(self, model_path, task):
@@ -84,7 +80,8 @@ class FairseqPredictor(Predictor):
         )
 
         # tensorize src
-        src_sentence = [token_id for token_id in input_features["input_ids"]]
+        src_sentence = [token_id for token_id in
+                        utils.get_last_item(input_features["input"])[1]]
         src_tokens = torch.LongTensor(
             [src_sentence], device=self.device)
         src_lengths = torch.LongTensor(
@@ -112,10 +109,10 @@ class FairseqPredictor(Predictor):
             }
         return new_state
 
-    def predict_next_single(self, state: Dict[str, Any]):
+    def predict_next_single(self, state: Dict[str, Any], scores: ...) -> ...:
         with torch.no_grad():
             consumed = torch.tensor(
                 [state["consumed"]], dtype=torch.long, device=self.device)
             log_probs, _ = self.model.forward_decoder(
                 consumed, self.encoder_outs, state["incremental_states"])
-            return log_probs[0].cpu().numpy()
+            return scores + log_probs[0].cpu().numpy()

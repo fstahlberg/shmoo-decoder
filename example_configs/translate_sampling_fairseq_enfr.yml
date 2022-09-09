@@ -5,9 +5,9 @@ fairseq:
    bpe: subword_nmt
    tokenizer: moses
 framework: fairseq
-decoder: BeamDecoder
+decoder: SamplingDecoder
 decoder_config:
-   beam_size: 6
+   samples: 6
 preprocessors:
    - FairseqTokenizerPreprocessor
    - FairseqBPEPreprocessor

@@ -1,3 +1,5 @@
+"""This module contains all pre- and postprocessors supported by Shmoo."""
+
 import os
 
 from shmoo.core import import_classes
@@ -8,7 +10,8 @@ PROCESSOR_REGISTRY = {}
 PROCESSOR_CLASS_NAMES = set()
 
 
-def setup_processor(processor_name, config):
+def setup_processor(processor_name: str, config) -> Processor:
+    """Looks up `processor_name` and calls it's `setup_processor(config)`."""
 
     if isinstance(processor_name, str):
         processor = PROCESSOR_REGISTRY[processor_name]
@@ -18,8 +21,9 @@ def setup_processor(processor_name, config):
     return processor.setup_processor(config)
 
 
-def register_processor(name):
-    """
+def register_processor(name: str):
+    """Adds a new processor to the registry.
+
     New pre- and postprocessors can be added to shmoo with the
     :func:`~shmoo.processors.register_processor` function decorator.
     For example::
@@ -29,16 +33,19 @@ def register_processor(name):
     .. note::
         All pre- and postprocessor must implement the :class:`~shmoo.interface.Processor`
         interface.
+
     Args:
         name (str): the name of the processor
     """
 
     def register_processor_cls(cls):
         if name in PROCESSOR_REGISTRY:
-            raise ValueError("Cannot register duplicate processor ({})".format(name))
+            raise ValueError(
+                "Cannot register duplicate processor ({})".format(name))
         if not issubclass(cls, Processor):
             raise ValueError(
-                "Processors ({}: {}) must extend the Processor interface".format(name, cls.__name__)
+                "Processors ({}: {}) must extend the Processor interface".format(
+                    name, cls.__name__)
             )
         if cls.__name__ in PROCESSOR_CLASS_NAMES:
             raise ValueError(
