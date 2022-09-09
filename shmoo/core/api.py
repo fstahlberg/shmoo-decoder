@@ -84,7 +84,6 @@ class Shmoo:
         for preprocessor in self._preprocessors:
             preprocessor.process(input_features)
         all_output_features = self._decoder.process(input_features)
-        for output_features in all_output_features:
-            for postprocessor in self._postprocessors:
-                postprocessor.process(output_features)
+        for postprocessor in self._postprocessors:
+            postprocessor.process_all(all_output_features)
         return all_output_features

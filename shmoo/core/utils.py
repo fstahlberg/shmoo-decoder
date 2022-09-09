@@ -1,3 +1,5 @@
+"""Utility functions used throughout the Shmoo framework."""
+
 from typing import Any, Sequence, Tuple
 from collections import OrderedDict
 
@@ -20,7 +22,10 @@ DEFAULT_EOS_ID = 2
 
 # Beam size used if beam_size is not set in the config.
 DEFAULT_BEAM_SIZE = 4
+
+# Default number of samples used in sampling-based decoders.
 DEFAULT_NUM_SAMPLES = 5
+
 DEFAULT_SEED = 1
 
 
