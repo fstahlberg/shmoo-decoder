@@ -26,8 +26,11 @@ class SamplingDecoder(Decoder):
             self.k = utils.get_from_decoder_config(config, 'k', utils.DEFAULT_TOP_K)
             self.make_probs = partial(self.normalise_top_k_scores, k=self.k)
         elif self.strategy == 'nucleus':
-            self.cutoff_p = utils.get_from_decoder_config(config, 'p', utils.DEFAULT_NUCLEUS_P)
-            self.make_probs = partial(self.normalise_scores_acc_to_prob_mass, cutoff_p=self.cutoff_p)
+            self.cutoff_nucleus_p = utils.get_from_decoder_config(config, 'p', utils.DEFAULT_NUCLEUS_P)
+            self.make_probs = partial(self.normalise_scores_acc_to_prob_mass, cutoff_p=self.cutoff_nucleus_p)
+        elif self.strategy == 'typical':
+            self.cutoff_typical_p = utils.get_from_decoder_config(config, 'typical p', utils.DEFAULT_TYPICAL_P)
+            self.make_probs = partial(self.normalise_scores_acc_to_expected_info, cutoff_p=self.cutoff_typical_p)
         else:
             raise NotImplementedError(f"{self.strategy} is not implemented.")
 
@@ -42,13 +45,25 @@ class SamplingDecoder(Decoder):
         sparse_probs[flat_indices[:k]] = np.exp(log_probs[flat_indices[:k]])
         return sparse_probs / np.sum(sparse_probs)
 
-    def normalise_scores_acc_to_prob_mass(self, log_probs: np.ndarray, cutoff_p: float) -> np.ndarray:
-        flat_indices = np.argsort(-log_probs)
+    def _normalise_scores_acc_to_prob_mass(self, log_probs: np.ndarray, scores: np.ndarray, cutoff_p: float) -> np.ndarray:
+        flat_indices = np.argsort(scores)
         sorted_probs = np.exp(log_probs[flat_indices])
         crit_ind = (np.cumsum(sorted_probs) < cutoff_p - np.finfo(np.float32).eps).argmin()
         sparse_probs = np.zeros(log_probs.size)
         sparse_probs[flat_indices[:crit_ind+1]] = np.exp(log_probs[flat_indices[:crit_ind+1]])
         return sparse_probs / np.sum(sparse_probs)
+
+    def normalise_scores_acc_to_prob_mass(self, log_probs: np.ndarray, cutoff_p: float) -> np.ndarray:
+        return self._normalise_scores_acc_to_prob_mass(scores=-log_probs,
+                                                  log_probs=log_probs,
+                                                  cutoff_p=cutoff_p)
+
+    def normalise_scores_acc_to_expected_info(self, log_probs: np.ndarray, cutoff_p: float) -> np.ndarray:
+        entropy = -np.sum(np.exp(log_probs) * log_probs)
+        shifted_abs_log_probs = np.abs(entropy + log_probs)
+        return self._normalise_scores_acc_to_prob_mass(scores=shifted_abs_log_probs,
+                                                       log_probs=log_probs,
+                                                       cutoff_p=cutoff_p)
 
     def process(
             self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
