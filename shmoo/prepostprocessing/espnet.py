@@ -36,7 +36,6 @@ class ESPnetProcessor(Processor):
 
         self.tokenizer_model_file = None
         self.tokenizer_model = None
-        self.eos_id = None
 
         self.input_type = None
         self.input_format = None
@@ -102,8 +101,9 @@ class ESPnetProcessor(Processor):
         print("- Loaded token2int.")
         print("- Vocab size:", len(self.token2int))
         # since <sos/eos> is the last token in ESPnet2 pre-processing
-        self.eos_id = len(self.token2int)
-        print("- Eos ID", self.eos_id)
+        self.bos_index = len(self.token2int)
+        self.eos_index = len(self.token2int)
+        print("- bos/eos index", self.eos_index)
 
         if self.config["token_type"] == "bpe":
 
