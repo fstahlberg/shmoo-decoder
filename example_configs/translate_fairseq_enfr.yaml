@@ -4,7 +4,10 @@ fairseq:
    trg_lang: fr
    bpe: subword_nmt
    tokenizer: moses
-framework: fairseq
+token_boost_token_id: 2
+predictors:
+   - Fairseq
+   - LengthNorm
 decoder: BeamDecoder
 decoder_config:
    beam_size: 3

@@ -37,6 +37,14 @@ class StdoutPostprocessor(Postprocessor):
                 for step, (key, value) in enumerate(
                         features["output"].items()):
                     print("  Step %d (%s): %r" % (step + 1, key, value))
+                additional_features = [item for item in sorted(features.items())
+                                       if item[0] not in ["score", "input",
+                                                          "output"]]
+                if additional_features:
+                    print("  ADDITIONAL FEATURES:")
+                    for item in additional_features:
+                        print("    %s: %r" % item)
+                print("")
             else:
                 print(
                     "%d. OUTPUT (%f): %r" % (

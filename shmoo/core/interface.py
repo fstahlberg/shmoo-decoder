@@ -6,7 +6,6 @@ about how these classes work together can be found here:
 """
 
 from collections import OrderedDict
-import copy
 from typing import Any, Dict, Sequence, Callable
 import numpy as np
 
@@ -17,14 +16,14 @@ class Hypothesis:
     """A (partial) hypothesis."""
 
     def __init__(self, states: Sequence[Dict[str, Any]], score: float,
-                 output_features: Dict[str, Any]):
+                 output_ids: ...):
         self.states = states
         self.score = score
-        self.output_features = output_features
+        self.output_ids = output_ids
         self.stale = False
 
     def __str__(self):
-        s = "score:%f feat:%s" % (self.score, self.output_features)
+        s = "score:%f feat:%s" % (self.score, self.output_ids)
         if self.stale:
             s += " (STALE)"
         return s
@@ -99,6 +98,16 @@ class Predictor:
 
     def predict_next(self, states: Sequence[Dict[str, Any]],
                      scores: ...) -> ...:
+        """Predicts a batch of scores for the next time step.
+
+        Args:
+            states: `batch_size` predictor states.
+            scores: A `[batch_size, vocab_size]` tensor containing the scores
+                passed through from the previous predictor.
+
+        Returns:
+            A `[batch_size, vocab_size]` tensor of scores.
+        """
         all_scores = []
         for state_index, state in enumerate(states):
             all_scores.append(
@@ -106,6 +115,28 @@ class Predictor:
         return np.stack(all_scores)
 
     def predict_next_single(self, state: Dict[str, Any], scores: ...) -> ...:
+        """Predicts the next time step scores given a single predictor state.
+
+        Args:
+            state: A single predictor state.
+            scores: A `[vocab_size,]` tensor containing the scores passed
+                through from the previous predictor.
+
+        Returns:
+            A `[vocab_size,]` tensor of scores.
+        """
+        raise NotImplementedError(
+            "Neither predict_next() nor predict_next_single() are implemented.")
+
+    def postprocess_output_features(self, state: Dict[str, Any],
+                                    output_features: Dict[str, Any]) -> None:
+        """Postprocesses the final output features.
+
+        Args:
+            state: Final predictor state
+            output_features: Output feature dict postprocessed by previous
+                predictors.
+        """
         pass
 
 
@@ -173,7 +204,7 @@ class Decoder:
     def is_finished(self, hypo: Hypothesis) -> bool:
         """Returns true if the last output ID is equal to end-of-sentence."""
         try:
-            return hypo.output_features["output_ids"][-1] == self.eos_id
+            return hypo.output_ids[-1] == self.eos_id
         except IndexError:
             return False
 
@@ -203,14 +234,15 @@ class Decoder:
         states = [predictor.initialize_state(input_features)
                   for predictor in self._predictors]
         return Hypothesis(
-            states=states, score=0.0, output_features={
-                "output_ids": []
-            })
+            states=states, score=0.0, output_ids=[])
 
     def make_hypothesis(self, prediction: Prediction,
                         lazy: bool = False) -> Hypothesis:
         if prediction.token_id is None:
             return prediction.parent_hypothesis
+
+        if prediction.parent_hypothesis.stale:
+            raise ValueError("Trying to expand stale hypothesis!")
 
         new_states = [predictor.update_single_state(
             state=old_state, prediction=prediction, lazy=lazy) for
@@ -218,14 +250,14 @@ class Decoder:
                 self._predictors, prediction.parent_hypothesis.states)]
         if lazy:
             prediction.parent_hypothesis.stale = True
-            output_features = prediction.parent_hypothesis.output_features
+            output_ids = prediction.parent_hypothesis.output_ids
+            output_ids.append(prediction.token_id)
         else:
-            output_features = copy.deepcopy(
-                prediction.parent_hypothesis.output_features)
-        output_features["output_ids"].append(prediction.token_id)
+            output_ids = prediction.parent_hypothesis.output_ids + [
+                prediction.token_id]
         return Hypothesis(
             states=new_states, score=prediction.score,
-            output_features=output_features)
+            output_ids=output_ids)
 
     def make_final_output_features(
             self,
@@ -234,12 +266,16 @@ class Decoder:
         all_output_features = []
         for hypo in sorted(hypos, key=lambda h: -h.score):
             if self.is_finished(hypo):
-                hypo.output_features.update(input_features)
-                hypo.output_features["score"] = hypo.score
-                hypo.output_features["output"] = OrderedDict(
-                    {"output": hypo.output_features["output_ids"]})
-                del hypo.output_features["output_ids"]
-                all_output_features.append(hypo.output_features)
+                output_features = {
+                    "score": hypo.score,
+                    "output": OrderedDict({"ids": hypo.output_ids})
+                }
+                output_features.update(input_features)
+                for state, predictor in zip(hypo.states, self._predictors):
+                    predictor.postprocess_output_features(
+                        state, output_features)
+                all_output_features.append(output_features)
+        all_output_features.sort(key=lambda f: -f["score"])
         return all_output_features
 
     def get_position_scores(

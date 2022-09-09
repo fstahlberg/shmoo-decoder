@@ -34,7 +34,7 @@ else:
 NEG_INF = float("-inf")
 
 
-@register_predictor("fairseq")
+@register_predictor("Fairseq")
 class FairseqPredictor(Predictor):
 
     def __init__(self, config):

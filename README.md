@@ -68,12 +68,17 @@ in Shmoo is as follows:
   BPE model.
 * `SPMPostprocessor`: Decodes the `output` feature with a sentencepiece model.
 * `RemoveEOSPostprocessor`: Removes the last token in the `output` feature.
+* `StdoutPostprocessor`: Writes the input and output features to stdout.
 
 ### Predictors
 
-* `FairseqPredictor`: Uses a left-to-right fairseq model for scoring.
+* `Fairseq`: Uses a left-to-right fairseq model for scoring.
+* `TokenBoost`: Boosts the score of a particular token at each time step. For example, this can be used to boost/discount the end-of-sentence symbol.
+* `LengthNorm`: Implements length normalization following [Wu et al. (2016)](https://arxiv.org/abs/1609.08144).
+* `ScoreRecorder`: Adds an additional output feature called `partial_scores` that contain the partial hypothesis scores for each time step.
 
 ### Decoders
 
 * `GreedyDecoder`: Greedy decoding (like beam decoding with a beam size of 1).
 * `BeamDecoder`: Standard beam decoding
+* `SamplingDecoder`: Implements a range of sampling strategies such as ancestral, top-k, nucleus, and typical sampling.

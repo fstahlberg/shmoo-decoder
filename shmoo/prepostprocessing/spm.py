@@ -1,3 +1,10 @@
+"""Encoding and decoding with a sentencepiece model.
+
+Uses the sentencepiece library
+    https://github.com/google/sentencepiece/
+to convert between plain text and token ID sequences.
+"""
+
 from absl import logging
 from typing import Any, Dict
 
@@ -16,6 +23,7 @@ else:
 
 @register_processor("SPMPreprocessor")
 class SPMPreprocessor(Preprocessor):
+    """Encodes a plain text string with an SPM model."""
 
     def __init__(self, config):
         super().__init__(config)
@@ -29,6 +37,7 @@ class SPMPreprocessor(Preprocessor):
 
 @register_processor("SPMPostprocessor")
 class SPMPostprocessor(Postprocessor):
+    """Converts a sequence of SPM token IDs to a plain text string."""
 
     def __init__(self, config):
         super().__init__(config)
