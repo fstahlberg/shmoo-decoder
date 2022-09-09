@@ -56,6 +56,9 @@ class ESPnetPredictor(Predictor):
 
         if self.task == "st":
             self.model = self.inference.st_model
+            decoder = self.model.decoder
+            self.weights = {"decoder": 1.0}
+            self.scorers = {"decoder": decoder}
 
         elif self.task == "asr":
             self.model = self.inference.asr_model
@@ -63,7 +66,7 @@ class ESPnetPredictor(Predictor):
 
             ctc = CTCPrefixScorer(ctc=self.model.ctc, eos=self.model.eos)
             decoder = self.model.decoder
-            self.scorers = {"ctc": ctc, "decoder" :decoder}
+            self.scorers = {"ctc": ctc, "decoder": decoder}
 
         elif self.task == "mt":
             self.model = self.inference.mt_model
@@ -117,21 +120,23 @@ class ESPnetPredictor(Predictor):
 
             consumed = torch.LongTensor([state["consumed"]])
 
-            if self.task == "asr":
+            weighted_scores = torch.zeros([1, self.model.vocab_size])
+
+            if "decoder" in self.scorers:
+                dec_scores, state["decoder"] = self.scorers["decoder"].batch_score(
+                    consumed,
+                    state["decoder"],
+                    self.encoder_outs.expand(1, *self.encoder_outs.shape),
+                )
+                weighted_scores += self.weights["decoder"] * dec_scores
+
+
+            if self.task in ("asr"):
 
                 pre_beam_scores = []
 
                 # might contain multiple scorers i.e.,
                 # ctc and a transformer auto-regressive decoder
-                weighted_scores = torch.zeros([1, self.model.vocab_size])
-
-                if "decoder" in self.scorers:
-                    dec_scores, state["decoder"] = self.scorers["decoder"].batch_score(
-                        consumed,
-                        state["decoder"],
-                        self.encoder_outs.expand(1, *self.encoder_outs.shape),
-                    )
-                    weighted_scores += self.weights["decoder"] * dec_scores
 
                 # import ipdb
                 # ipdb.set_trace()
