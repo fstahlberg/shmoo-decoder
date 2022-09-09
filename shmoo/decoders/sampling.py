@@ -1,5 +1,9 @@
 from absl import logging
 from typing import Any, Dict, Sequence
+from functools import partial
+
+import numpy as np
+from scipy.special import softmax
 
 from shmoo.core import utils
 from shmoo.core.interface import Decoder
@@ -13,13 +17,45 @@ class SamplingDecoder(Decoder):
         self._finished_criterion = self.all_hypos_finished
         self.seed = utils.get_from_decoder_config(config, 'seed', utils.DEFAULT_SEED)
         self.num_samples = utils.get_from_decoder_config(config, 'num_samples', utils.DEFAULT_NUM_SAMPLES)
-        logging.info(f"Sampling Decoder successfully initialized.")
-        logging.info(f"Number of samples: {self.num_samples}")
+        self.strategy = utils.get_from_decoder_config(config, 'strategy', utils.DEFAULT_SAMPLING_STRATEGY)
+
+        if self.strategy == 'temperature':
+            self.temp = utils.get_from_decoder_config(config, 'temperature', utils.DEFAULT_TEMPERATURE)
+            self.make_probs = partial(self.normalise_scores, temp=self.temp)
+        elif self.strategy == 'top k':
+            self.k = utils.get_from_decoder_config(config, 'k', utils.DEFAULT_TOP_K)
+            self.make_probs = partial(self.normalise_top_k_scores, k=self.k)
+        elif self.strategy == 'nucleus':
+            self.cutoff_p = utils.get_from_decoder_config(config, 'p', utils.DEFAULT_NUCLEUS_P)
+            self.make_probs = partial(self.normalise_scores_acc_to_prob_mass, cutoff_p=self.cutoff_p)
+        else:
+            raise NotImplementedError(f"{self.strategy} is not implemented.")
+
+        logging.info(f"Sampling Decoder using successfully initialized.")
+
+    def normalise_scores(self, log_probs: np.ndarray, temp: float) -> np.ndarray:
+        return np.exp(log_probs) if temp == 1 else softmax(log_probs / temp)
+
+    def normalise_top_k_scores(self, log_probs: np.ndarray, k: int) -> np.ndarray:
+        flat_indices = np.argpartition(-log_probs, k, axis=None)
+        sparse_probs = np.zeros(log_probs.size)
+        sparse_probs[flat_indices[:k]] = np.exp(log_probs[flat_indices[:k]])
+        return sparse_probs / np.sum(sparse_probs)
+
+    def normalise_scores_acc_to_prob_mass(self, log_probs: np.ndarray, cutoff_p: float) -> np.ndarray:
+        flat_indices = np.argsort(-log_probs)
+        sorted_probs = np.exp(log_probs[flat_indices])
+        crit_ind = (np.cumsum(sorted_probs) < cutoff_p - np.finfo(np.float32).eps).argmin()
+        sparse_probs = np.zeros(log_probs.size)
+        sparse_probs[flat_indices[:crit_ind+1]] = np.exp(log_probs[flat_indices[:crit_ind+1]])
+        return sparse_probs / np.sum(sparse_probs)
 
     def process(
             self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
         hypos = [self.make_initial_hypothesis(input_features) for _ in range(self.num_samples)]
         while not self._finished_criterion(hypos):
-            predictions = self.sample_predictions(hypos, seed=self.seed)
+            predictions = self.sample_predictions(hypos,
+                                                  seed=self.seed,
+                                                  make_probs=self.make_probs)
             hypos = [self.make_hypothesis(prediction, lazy=True) for prediction in predictions]
         return self.make_final_output_features(input_features, hypos)

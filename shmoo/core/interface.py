@@ -1,7 +1,6 @@
 import copy
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Sequence, Callable
 import numpy as np
-from scipy.special import softmax
 
 from shmoo.core import utils
 
@@ -198,7 +197,8 @@ class Decoder:
     def sample_predictions(
             self,
             hypos: Sequence[Hypothesis],
-            seed: int) -> Sequence[Prediction]:
+            seed: int,
+            make_probs: Callable) -> Sequence[Prediction]:
 
         unfinished_hypos = [hypo for hypo in hypos if not self.is_finished(hypo)]
         pos_scores = self.get_position_scores(hypos=unfinished_hypos)
@@ -213,7 +213,7 @@ class Decoder:
             sampled_token_id = np.random.choice(
                 a=[i for i in range(vocab_size)],
                 size=1,
-                p=softmax(pos_scores[sample_id,:]),
+                p=make_probs(pos_scores[sample_id,:]), # pos_scores[sample_id,:] needs to be 1-dimensional array
             )
             predictions.append(
                 Prediction(

@@ -15,8 +15,14 @@ FAIRSEQ_INITIALIZED = False
 
 DEFAULT_EOS_ID = 2
 DEFAULT_BEAM_SIZE = 4
+
+# Sampling hyperparameters
+DEFAULT_SAMPLING_STRATEGY = "temperature"
 DEFAULT_NUM_SAMPLES = 5
 DEFAULT_SEED = 1
+DEFAULT_TEMPERATURE = 1
+DEFAULT_TOP_K = 10
+DEFAULT_NUCLEUS_P = 0.8
 
 def _initialize_fairseq(user_dir):
     global FAIRSEQ_INITIALIZED
@@ -29,7 +35,9 @@ def _initialize_fairseq(user_dir):
 
 
 def get_from_decoder_config(config, argument, default):
-    return config.get('decoder_config', {}).get(argument, default)
+    param = config.get('decoder_config', {}).get(argument, default)
+    logging.info(f"{argument}: {param}")
+    return param
 
 
 def make_fairseq_task(input_args):
