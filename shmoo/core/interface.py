@@ -301,6 +301,10 @@ class Decoder:
                 )
         return predictions
 
+    def modify_scores(self, scores: np.ndarray) -> np.ndarray:
+        "Method to be overwritten in specific decoders"
+        return scores
+
     def get_predictions(
             self,
             hypos: Sequence[Hypothesis],
@@ -308,6 +312,7 @@ class Decoder:
         unfinished_hypos = [hypo for hypo in hypos if
                             not self.is_finished(hypo)]
         pos_scores = self.get_position_scores(hypos=unfinished_hypos)
+        pos_scores = self.modify_scores(scores=pos_scores)
         base_scores = [hypo.score for hypo in unfinished_hypos]
         accumulated_scores = pos_scores + np.expand_dims(base_scores, 1)
         flat_indices = np.argpartition(-accumulated_scores, nbest, axis=None)
