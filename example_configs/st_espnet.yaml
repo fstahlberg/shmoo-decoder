@@ -5,7 +5,7 @@ espnet:
    src_lang: en
    tgt_lang: pt
    bpe: spm
-framework: espnet
+framework: Espnet
 decoder: BeamDecoder
 decoder_config:
    beam_size: 20

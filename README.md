@@ -8,12 +8,42 @@ framework, and thus prefers modularity and extensibility over runtime performanc
 
 ## Installation
 
+The minimal dependencies are `numpy`, `scipy`, and `absl-py`. Shmoo with these dependencies can be installed as follows: 
+
 ```commandline
 pip install --upgrade pip  # ensures that pip is current
 git clone https://github.com/fstahlberg/shmoo-decoder.git
 cd shmoo-decoder
 pip install .
 ```
+
+Additional dependencies are required for the following frameworks and/or pre-/postprocessors:
+
+- Configuration with YAML files:
+  ```commandline
+  pip install ruamel.yaml
+  ```
+- SPM pre- and postprocessing:
+  ```commandline
+  pip install sentencepiece
+  ```
+
+- Fairseq:
+  ```commandline
+  pip install fairseq
+  pip install sacremoses  # For moses FairseqTokenizer
+  pip install subword-nmt   # For FairseqBPE
+  ```
+- ESPnet:
+  ```commandline
+  pip install kaldiio soundfile  # for speech
+  pip install espnet # for speech translation, asr using espnet
+  ```
+
+- Sacrebleu metrics:
+  ```commandline
+  pip install sacrebleu
+  ```
 
 ## Examples
 
