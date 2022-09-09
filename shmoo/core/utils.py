@@ -21,8 +21,6 @@ FAIRSEQ_INITIALIZED = False
 DEFAULT_EOS_ID = 2
 
 
-
-
 def _initialize_fairseq(user_dir: str) -> None:
     """Sets up the fairseq library by importing a fairseq user directory.
 

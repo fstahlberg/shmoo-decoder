@@ -75,7 +75,7 @@ in Shmoo is as follows:
 * `Fairseq`: Uses a left-to-right fairseq model for scoring.
 * `TokenBoost`: Boosts the score of a particular token at each time step. For example, this can be used to boost/discount the end-of-sentence symbol.
 * `LengthNorm`: Implements length normalization following [Wu et al. (2016)](https://arxiv.org/abs/1609.08144).
-* `ScoreRecorder`: Adds an additional output feature called `partial_scores` that contain the partial hypothesis scores for each time step.
+* `ScoreRecorder`: Adds an additional output feature called `partial_scores` that contains the partial hypothesis scores for each time step.
 
 ### Decoders
 

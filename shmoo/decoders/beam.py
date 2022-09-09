@@ -1,3 +1,5 @@
+"""Beam search based decoding strategies."""
+
 from absl import logging
 from typing import Any, Dict, Sequence
 
@@ -11,6 +13,7 @@ DEFAULT_BEAM_SIZE = 4
 
 @register_decoder("BeamDecoder")
 class BeamDecoder(Decoder):
+    """Vanilla beam search implementation."""
 
     def __init__(self, config):
         super().__init__(config)

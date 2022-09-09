@@ -16,6 +16,7 @@ from shmoo.prepostprocessing import register_processor
 
 @register_processor("FairseqTokenizerPreprocessor")
 class FairseqTokenizerPreprocessor(Preprocessor):
+    """Encodes with a fairseq `tokenizer`."""
 
     def __init__(self, config):
         super().__init__(config)
@@ -29,6 +30,7 @@ class FairseqTokenizerPreprocessor(Preprocessor):
 
 @register_processor("FairseqTokenizerPostprocessor")
 class FairseqTokenizerPostprocessor(Postprocessor):
+    """Decodes with a fairseq `tokenizer`."""
 
     def __init__(self, config):
         super().__init__(config)
@@ -42,6 +44,7 @@ class FairseqTokenizerPostprocessor(Postprocessor):
 
 @register_processor("FairseqBPEPreprocessor")
 class FairseqBPEPreprocessor(Preprocessor):
+    """Encodes with a fairseq BPE model."""
 
     def __init__(self, config):
         super().__init__(config)
@@ -57,6 +60,7 @@ class FairseqBPEPreprocessor(Preprocessor):
 
 @register_processor("FairseqBPEPostprocessor")
 class FairseqBPEPostprocessor(Postprocessor):
+    """Decodes with a fairseq BPE model."""
 
     def __init__(self, config):
         super().__init__(config)
@@ -74,7 +78,7 @@ class FairseqBPEPostprocessor(Postprocessor):
 
 @register_processor("FairseqSplitPreprocessor")
 class FairseqSplitPreprocessor(Preprocessor):
-    """Simply splits the string and maps to ids"""
+    """Simply splits the string and maps to ids."""
 
     def __init__(self, config):
         super().__init__(config)
@@ -88,6 +92,7 @@ class FairseqSplitPreprocessor(Preprocessor):
 
 @register_processor("FairseqSplitPostprocessor")
 class FairseqSplitPostprocessor(Postprocessor):
+    """Maps output IDs using the target dict and joins the symbols."""
 
     def __init__(self, config):
         super().__init__(config)

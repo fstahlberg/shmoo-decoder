@@ -36,12 +36,13 @@ NEG_INF = float("-inf")
 
 @register_predictor("Fairseq")
 class FairseqPredictor(Predictor):
+    """Faiseq predictor.
+
+    The implementation follows this SGNMT fairseq predictor from this repo:
+        https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
+    """
 
     def __init__(self, config):
-        """
-        Check https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
-        for an idea of how the model can actually be loaded
-        """
         super().__init__(config)
         self.device = torch.device("cpu")
         task, args = utils.make_fairseq_task(config['fairseq'])

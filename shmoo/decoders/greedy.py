@@ -1,3 +1,5 @@
+"""Greedy decoder implementation."""
+
 from absl import logging
 from typing import Any, Dict, Sequence
 
@@ -7,6 +9,7 @@ from shmoo.decoders import register_decoder
 
 @register_decoder("GreedyDecoder")
 class GreedyDecoder(Decoder):
+    """Greedy decoding, similar to BeamDecoder with beam_size=1."""
 
     def __init__(self, config):
         super().__init__(config)
