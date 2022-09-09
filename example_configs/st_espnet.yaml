@@ -1,0 +1,18 @@
+espnet:
+   task: st
+   model_path: exp/st_train_st_extracted_bpe_tc8000/valid.acc.best.pth
+   config: exp/st_train_st_extracted_bpe_tc8000/config.yaml
+   src_lang: en
+   tgt_lang: pt
+   bpe: spm
+framework: espnet
+decoder: BeamDecoder
+decoder_config:
+   beam_size: 20
+   ctc_weight: 0.0
+   pre_beam_factor: 1.5
+preprocessors:
+   - ESPnetPreprocessor
+postprocessors:
+   - ESPnetPostprocessor
+eos_id: 7999
