@@ -5,7 +5,7 @@ from typing import Dict, Any
 
 from yaml import full_load
 import torch
-
+from shmoo.core import utils
 from shmoo.core.interface import Predictor
 from shmoo.core.interface import Prediction
 from shmoo.predictors import register_predictor
@@ -20,13 +20,16 @@ from espnet2.bin.mt_inference import Text2Text as MT
 ESPNET_TASK_MAP = {"st": ST, "asr": ASR, "mt": MT}
 
 
-@register_predictor("ESPnetPredictor")
+@register_predictor("espnet")
 class ESPnetPredictor(Predictor):
-    def __init__(self, config_file: str, model_pth: str, task="st"):
+    def __init__(self, config: dict):
         """Initialize ESPnet model"""
 
-        self.task = task
-        self.inference = ESPNET_TASK_MAP[task](config_file, model_pth)
+        config_file = config["espnet"]["config"]
+        model_path = config["espnet"]["model_path"]
+        self.task = config["espnet"]["task"]
+
+        self.inference = ESPNET_TASK_MAP[self.task](config_file, model_path)
 
         self.config = {}
         with open(config_file, "r") as fpr:
@@ -36,19 +39,21 @@ class ESPnetPredictor(Predictor):
         self.weights = {}
         self.scorers = {}
 
-        ctc_weight = 0.5
+        ctc_weight = config["decoder_config"]["ctc_weight"]
         self.pre_beam_score_key = "full"
-        beam_size = 20
-        self.pre_beam_size = int(1.5 * beam_size)
+        beam_size = config["decoder_config"]["beam_size"]
+        self.pre_beam_size = int(
+            config["decoder_config"]["pre_beam_factor"] * beam_size
+        )
 
         # we should set it from the information from pre-processor
         self.bos_index = len(self.config["token_list"]) - 1
         self.eos_index = len(self.config["token_list"]) - 1
 
-        if task == "st":
+        if self.task == "st":
             self.model = self.inference.st_model
 
-        elif task == "asr":
+        elif self.task == "asr":
             self.model = self.inference.asr_model
             self.weights = {"ctc": ctc_weight, "decoder": 1.0 - ctc_weight}
 
@@ -56,7 +61,7 @@ class ESPnetPredictor(Predictor):
             decoder = self.model.decoder
             self.scorers = {"ctc": ctc, "decoder" :decoder}
 
-        elif task == "mt":
+        elif self.task == "mt":
             self.model = self.inference.mt_model
 
         else:
@@ -69,7 +74,7 @@ class ESPnetPredictor(Predictor):
 
         state["incremental_states"] = []
 
-        input_feats = torch.Tensor(input_features["input_ids"])
+        input_feats = torch.from_numpy(input_features["input"]["ids"])
         input_feats = input_feats.unsqueeze(0)
         lengths = input_feats.new_full(
             [1], dtype=torch.long, fill_value=input_feats.size(1)
@@ -102,7 +107,7 @@ class ESPnetPredictor(Predictor):
             }
         return new_state
 
-    def predict_next_single(self, state: Dict[str, Any]):
+    def predict_next_single(self, state: Dict[str, Any], scores):
 
         with torch.no_grad():
 
@@ -117,28 +122,31 @@ class ESPnetPredictor(Predictor):
                 weighted_scores = torch.zeros([1, self.model.vocab_size])
 
                 if "decoder" in self.scorers:
-                    scores, state["decoder"] = self.scorers["decoder"].batch_score(
+                    dec_scores, state["decoder"] = self.scorers["decoder"].batch_score(
                         consumed,
                         state["decoder"],
                         self.encoder_outs.expand(1, *self.encoder_outs.shape),
                     )
-                    weighted_scores += self.weights["decoder"] * scores
+                    weighted_scores += self.weights["decoder"] * dec_scores
 
-                if "ctc" in self.scorers:
-                    if self.pre_beam_score_key == "full":
-                        pre_beam_scores = weighted_scores
-                    else:
-                        pre_beam_scores = scores[self.pre_beam_score_key]
+                # import ipdb
+                # ipdb.set_trace()
+                # if "ctc" in self.scorers:
+                #     if self.pre_beam_score_key == "full":
+                #         pre_beam_scores = weighted_scores
+                #     else:
+                #         pre_beam_scores = dec_scores[self.pre_beam_score_key]
 
-                    part_ids = torch.topk(
-                        pre_beam_scores, self.pre_beam_size, dim=-1
-                    )[1]
-                    scores, state["ctc"] = self.scorers["ctc"].batch_score_partial(
-                        consumed, part_ids, state["ctc"], self.encoder_outs
-                    )
-                    weighted_scores += self.weights["ctc"] * scores
+                #     part_ids = torch.topk(
+                #         pre_beam_scores, self.pre_beam_size, dim=-1
+                #     )[1]
 
-        return weighted_scores.cpu().numpy()
+                #     ctc_scores, state["ctc"] = self.scorers["ctc"].batch_score_partial(
+                #         consumed, part_ids, state["ctc"], self.encoder_outs
+                #     )
+                #     weighted_scores += self.weights["ctc"] * ctc_scores
+
+        return scores + weighted_scores.squeeze().cpu().numpy()
 
 
 def main(args):

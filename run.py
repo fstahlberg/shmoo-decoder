@@ -16,6 +16,9 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     "single_sentence", None,
     "If specified, decode this single sentence and exit.")
+flags.DEFINE_string(
+    "kaldi_ark", None,
+    "Load speech features from kaldi_ark file")
 flags.mark_flag_as_required("config_path")
 
 
@@ -26,9 +29,12 @@ def main(argv):
     shmoo_decoder.set_up_with_yaml(config_path=FLAGS.config_path)
     shmoo_decoder.add_postprocessor(StdoutPostprocessor({"verbose": True}))
 
-    lines = [FLAGS.single_sentence] if FLAGS.single_sentence else sys.stdin
-    for line in lines:
-        shmoo_decoder.decode(line.strip())
+    if FLAGS.kaldi_ark:
+        shmoo_decoder.decode(FLAGS.kaldi_ark)
+    else:
+        lines = [FLAGS.single_sentence] if FLAGS.single_sentence else sys.stdin
+        for line in lines:
+            shmoo_decoder.decode(line.strip())
 
 
 if __name__ == "__main__":

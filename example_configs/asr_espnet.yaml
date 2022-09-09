@@ -1,0 +1,17 @@
+espnet:
+   task: asr
+   model_path: exp/asr_transformer_bpe5000_lr_0.001_ctc_0.3/valid.acc.best.pth
+   config: exp/asr_transformer_bpe5000_lr_0.001_ctc_0.3/config.yaml
+   src_lang: en
+   bpe: spm
+framework: espnet
+decoder: BeamDecoder
+decoder_config:
+   beam_size: 20
+   ctc_weight: 0.0
+   pre_beam_factor: 1.5
+preprocessors:
+   - ESPnetPreprocessor
+postprocessors:
+   - ESPnetPostprocessor
+eos_id: 4999
