@@ -1,16 +1,15 @@
-"""
+"""Predictor for scoring with fairseq models.
 
-This is the interface to the fairseq library.
+This is the main interface to scoring with the fairseq library.
 
 https://github.com/pytorch/fairseq
 
-It is based on the fairseq predictor for SGNMT from
+The predictor is based on the fairseq predictor for SGNMT from
 https://github.com/bpopeters/sgnmt/blob/master/cam/sgnmt/predictors/pytorch_fairseq.py
 """
 
 from absl import logging
 import copy
-import os
 from typing import Dict, List, Optional, Any
 
 from shmoo.core.interface import Predictor
@@ -44,16 +43,12 @@ class FairseqPredictor(Predictor):
         for an idea of how the model can actually be loaded
         """
         super().__init__(config)
-        model_path = f"{config['fairseq']['model_dir']}/model.pt"
-        input_args = [config['fairseq']['model_dir'],
-                      "--path", model_path,
-                      "--source-lang", config['fairseq']["src_lang"],
-                      "--target-lang", config['fairseq']["trg_lang"]]
         self.device = torch.device("cpu")
-        task, args = utils.make_fairseq_task(input_args)
+        task, args = utils.make_fairseq_task(config['fairseq'])
         self.src_vocab_size = len(task.source_dictionary)
         self.bos_index = task.target_dictionary.bos_index
-        self.model = self._build_ensemble(model_path, task)
+        self.model = self._build_ensemble(
+            f"{config['fairseq']['model_dir']}/model.pt", task)
         self.encoder_outs = None
 
     def _build_ensemble(self, model_path, task):

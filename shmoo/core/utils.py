@@ -1,6 +1,6 @@
 """Utility functions used throughout the Shmoo framework."""
 
-from typing import Any, Sequence, Tuple
+from typing import Any, Dict, Optional, Tuple
 from collections import OrderedDict
 
 from absl import logging
@@ -20,20 +20,7 @@ FAIRSEQ_INITIALIZED = False
 # End-of-sentence symbol used if eos_id is not set in the config.
 DEFAULT_EOS_ID = 2
 
-# Beam size used if beam_size is not set in the config.
-DEFAULT_BEAM_SIZE = 4
 
-# Sampling hyperparameters
-DEFAULT_SAMPLING_STRATEGY = "nucleus"
-
-# Default number of samples used in sampling-based decoders.
-DEFAULT_NUM_SAMPLES = 5
-
-DEFAULT_SEED = 1
-DEFAULT_TEMPERATURE = 1
-DEFAULT_TOP_K = 10
-DEFAULT_NUCLEUS_P = 0.8
-DEFAULT_TYPICAL_P = 0.8
 
 
 def _initialize_fairseq(user_dir: str) -> None:
@@ -51,24 +38,77 @@ def _initialize_fairseq(user_dir: str) -> None:
         FAIRSEQ_INITIALIZED = True
 
 
-def get_from_decoder_config(config, argument, default):
-    param = config.get('decoder_config', {}).get(argument, default)
-    logging.info(f"{argument}: {param}")
-    return param
+def get_from_decoder_config(config, key: str, default: Optional[Any] = None):
+    return get_from_config(
+        config, key, subsection='decoder_config', default=default)
 
 
-def make_fairseq_task(input_args: Sequence[str]) -> Tuple[Any, Any]:
+def get_from_config(config, key: str, subsection: Optional[str] = None,
+                    default: Optional[Any] = None) -> Any:
+    if subsection is not None:
+        try:
+            return config[subsection][key]
+        except KeyError:
+            if default is None:
+                logging.fatal(
+                    "Did not find required key '%s -> %s' in the config.",
+                    subsection, key)
+                raise ValueError("Required key not found in config.")
+            logging.info(
+                "Did not find key '%s -> %s' in the config. Using default: %r",
+                subsection, key, default)
+            return default
+    else:
+        try:
+            return config[key]
+        except KeyError:
+            if default is None:
+                logging.fatal(
+                    "Did not find required key '%s' in the config.", key)
+                raise ValueError("Required key not found in config.")
+            logging.info(
+                "Did not find key '%s' in the config. Using default value %r",
+                key, default)
+            return default
+
+
+# Cache for fairseq tasks (see make_fairseq_task()).
+_FAIRSEQ_TASK_CACHE = {}
+
+
+def make_fairseq_task(fairseq_config: Dict[str, Any]) -> Tuple[Any, Any]:
     """Creates a Fairseq task for accessing tokenizers and models.
 
     Args:
-        input_args: Fairseq command line arguments.
+        fairseq_config: Fairseq config dictionary.
 
     Returns:
         A tuple (fairseq_task, args).
     """
+    global _FAIRSEQ_TASK_CACHE
+    config_cache_key = str(fairseq_config)
+    if config_cache_key in _FAIRSEQ_TASK_CACHE:
+        return _FAIRSEQ_TASK_CACHE[config_cache_key]
+
+    model_path = f"{fairseq_config['model_dir']}/model.pt"
+    input_args = [fairseq_config['model_dir'],
+                  "--path", model_path]
+    if "src_lang" in fairseq_config:
+        input_args.extend(['--source-lang', fairseq_config["src_lang"]])
+    if "trg_lang" in fairseq_config:
+        input_args.extend(["--target-lang", fairseq_config["trg_lang"]])
+    if "tokenizer" in fairseq_config:
+        input_args.extend(['--tokenizer', fairseq_config["tokenizer"]])
+    if "bpe" in fairseq_config:
+        input_args.extend(
+            ['--bpe', fairseq_config['bpe'],
+             '--bpe-codes', f"{fairseq_config['model_dir']}/bpecodes"])
     parser = options.get_generation_parser()
     args = options.parse_args_and_arch(parser, input_args)
-    return tasks.setup_task(args), args
+    task = tasks.setup_task(args)
+
+    _FAIRSEQ_TASK_CACHE[config_cache_key] = (task, args)
+    return task, args
 
 
 def get_last_item(ordered_dict: OrderedDict) -> ...:

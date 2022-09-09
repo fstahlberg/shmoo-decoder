@@ -19,7 +19,8 @@ class SPMPreprocessor(Preprocessor):
 
     def __init__(self, config):
         super().__init__(config)
-        self._spm = spm.SentencePieceProcessor(model_file=config["spm_path"])
+        self._spm = spm.SentencePieceProcessor(
+            model_file=utils.get_from_config(config, "spm_path"))
 
     def process(self, features: Dict[str, Any]) -> None:
         features["input"]["ids"] = self._spm.encode(
@@ -31,7 +32,8 @@ class SPMPostprocessor(Postprocessor):
 
     def __init__(self, config):
         super().__init__(config)
-        self._spm = spm.SentencePieceProcessor(model_file=config["spm_path"])
+        self._spm = spm.SentencePieceProcessor(
+            model_file=utils.get_from_config(config, "spm_path"))
 
     def process(self, features: Dict[str, Any]) -> None:
         features["output"]["raw"] = self._spm.decode(

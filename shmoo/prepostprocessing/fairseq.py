@@ -1,3 +1,11 @@
+"""Pre- and postprocessing adaptors for fairseq.
+
+This module provides access to pre- and postprocessing strategies like
+tokenizers and subword unit segmentations from the fairseq library.
+
+https://github.com/pytorch/fairseq
+"""
+
 from typing import Any, Dict
 
 from shmoo.core.interface import Preprocessor
@@ -11,11 +19,7 @@ class FairseqTokenizerPreprocessor(Preprocessor):
 
     def __init__(self, config):
         super().__init__(config)
-        task, args = utils.make_fairseq_task(
-            [config['fairseq']['model_dir'],
-             '--source-lang', config['fairseq']["src_lang"], "--target-lang",
-             config['fairseq']["trg_lang"], '--tokenizer',
-             config['fairseq']["tokenizer"]])
+        task, args = utils.make_fairseq_task(config["fairseq"])
         self._tokenizer = task.build_tokenizer(args)
 
     def process(self, features: Dict[str, Any]) -> None:
@@ -28,11 +32,7 @@ class FairseqTokenizerPostprocessor(Postprocessor):
 
     def __init__(self, config):
         super().__init__(config)
-        task, args = utils.make_fairseq_task(
-            [config['fairseq']['model_dir'],
-             '--source-lang', config['fairseq']["src_lang"], '--target-lang',
-             config['fairseq']["trg_lang"], '--tokenizer',
-             config['fairseq']["tokenizer"]])
+        task, args = utils.make_fairseq_task(config['fairseq'])
         self._tokenizer = task.build_tokenizer(args)
 
     def process(self, features: Dict[str, Any]) -> None:
@@ -45,12 +45,7 @@ class FairseqBPEPreprocessor(Preprocessor):
 
     def __init__(self, config):
         super().__init__(config)
-        task, args = utils.make_fairseq_task(
-            [config['fairseq']['model_dir'],
-             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
-             config['fairseq']['trg_lang'], '--bpe',
-             config['fairseq']['bpe'], '--bpe-codes',
-             f"{config['fairseq']['model_dir']}/bpecodes"])
+        task, args = utils.make_fairseq_task(config['fairseq'])
         self._bpe = task.build_bpe(args)
         self._src_dict = task.src_dict
 
@@ -65,20 +60,16 @@ class FairseqBPEPostprocessor(Postprocessor):
 
     def __init__(self, config):
         super().__init__(config)
-        task, args = utils.make_fairseq_task(
-            [config['fairseq']['model_dir'],
-             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
-             config['fairseq']['trg_lang'], '--bpe',
-             config['fairseq']['bpe'], '--bpe-codes',
-             f"{config['fairseq']['model_dir']}/bpecodes"])
+        task, args = utils.make_fairseq_task(config['fairseq'])
         self._bpe = task.build_bpe(args)
         self._tgt_dict = task.tgt_dict
 
     def process(self, features: Dict[str, Any]) -> None:
         bpe_symbols = [self._tgt_dict[token_id] for token_id in
                        utils.get_last_item(features["output"])[1]]
-        features["output"]["fairseq_bpe"] = " ".join(bpe_symbols)
-        features["output"]["raw"] = self._bpe.decode(" ".join(bpe_symbols))
+        features["output"]["fairseq_bpe"] = bpe_symbols
+        features["output"]["fairseq_postbpe"] = self._bpe.decode(
+            " ".join(bpe_symbols))
 
 
 @register_processor("FairseqSplitPreprocessor")
@@ -87,10 +78,7 @@ class FairseqSplitPreprocessor(Preprocessor):
 
     def __init__(self, config):
         super().__init__(config)
-        task, args = utils.make_fairseq_task(
-            [config['fairseq']['model_dir'],
-             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
-             config['fairseq']['trg_lang']])
+        task, args = utils.make_fairseq_task(config['fairseq'])
         self._src_dict = task.src_dict
 
     def process(self, features: Dict[str, Any]) -> None:
@@ -103,10 +91,7 @@ class FairseqSplitPostprocessor(Postprocessor):
 
     def __init__(self, config):
         super().__init__(config)
-        task, args = utils.make_fairseq_task(
-            [config['fairseq']['model_dir'],
-             '--source-lang', config['fairseq']['src_lang'], '--target-lang',
-             config['fairseq']['trg_lang']])
+        task, args = utils.make_fairseq_task(config['fairseq'])
         self._tgt_dict = task.tgt_dict
 
     def process(self, features: Dict[str, Any]) -> None:

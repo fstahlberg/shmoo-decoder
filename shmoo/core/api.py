@@ -14,7 +14,10 @@ from collections import OrderedDict
 from typing import Any, Dict, Optional, Sequence
 from absl import logging
 
-from shmoo import prepostprocessing, decoders, predictors
+from shmoo.core import utils
+from shmoo import decoders
+from shmoo import predictors
+from shmoo import prepostprocessing
 
 try:
     from ruamel.yaml import YAML
@@ -34,14 +37,16 @@ class Shmoo:
 
     def set_up(self, config: Dict[str, Any]) -> None:
         """Set up the Shmoo API with a config dictionary."""
-        self._decoder = decoders.setup_decoder(config["decoder"], config)
+        self._decoder = decoders.setup_decoder(
+            utils.get_from_config(config, "decoder"), config)
 
         # TODO: Extend to support multiple predictors
         self._decoder.add_predictor(
-            predictors.setup_predictor(config["framework"], config)
+            predictors.setup_predictor(
+                utils.get_from_config(config, "framework"), config)
         )
 
-        for preprocessor in config["preprocessors"]:
+        for preprocessor in utils.get_from_config(config, "preprocessors"):
             # preprocessor is a str if no parameters are specified
             self._preprocessors.append(
                 prepostprocessing.setup_processor(
@@ -50,7 +55,7 @@ class Shmoo:
                     config)
             )
 
-        for postprocessor in config["postprocessors"]:
+        for postprocessor in utils.get_from_config(config, "postprocessors"):
             # postprocessor is a str if no parameters are specified
             self._postprocessors.append(
                 prepostprocessing.setup_processor(
