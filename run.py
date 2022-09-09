@@ -1,10 +1,11 @@
-"""Example script for illustrating """
+"""Example script for running the Shmoo decoder on string input."""
 
 from absl import app
 from absl import flags
 import sys
 
 from shmoo.core import api
+from shmoo.prepostprocessing.io import StdoutPostprocessor
 
 FLAGS = flags.FLAGS
 
@@ -23,19 +24,11 @@ def main(argv):
 
     shmoo_decoder = api.Shmoo()
     shmoo_decoder.set_up_with_yaml(config_path=FLAGS.config_path)
+    shmoo_decoder.add_postprocessor(StdoutPostprocessor({"verbose": True}))
 
-    if FLAGS.single_sentence:
-        source_sentences = [FLAGS.single_sentence]
-    else:
-        source_sentences = sys.stdin
-
-    for line in source_sentences:
-        source_sentence = line.strip()
-        all_output_features = shmoo_decoder.decode(source_sentence)
-        for index, output_features in enumerate(all_output_features):
-            print("\n%d. BEST OUTPUT" % (index + 1,))
-            for key, val in sorted(output_features.items()):
-                print("%s: %s" % (key, val))
+    lines = [FLAGS.single_sentence] if FLAGS.single_sentence else sys.stdin
+    for line in lines:
+        shmoo_decoder.decode(line.strip())
 
 
 if __name__ == "__main__":

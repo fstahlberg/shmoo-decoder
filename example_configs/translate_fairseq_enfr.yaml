@@ -7,7 +7,7 @@ fairseq:
 framework: fairseq
 decoder: BeamDecoder
 decoder_config:
-   beam_size: 6
+   beam_size: 3
 preprocessors:
    - FairseqTokenizerPreprocessor
    - FairseqBPEPreprocessor

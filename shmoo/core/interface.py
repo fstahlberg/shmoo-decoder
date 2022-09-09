@@ -97,13 +97,15 @@ class Predictor:
         """
         return state
 
-    def predict_next(self, states: Sequence[Dict[str, Any]]):
+    def predict_next(self, states: Sequence[Dict[str, Any]],
+                     scores: ...) -> ...:
         all_scores = []
-        for state in states:
-            all_scores.append(self.predict_next_single(state))
+        for state_index, state in enumerate(states):
+            all_scores.append(
+                self.predict_next_single(state, scores[state_index]))
         return np.stack(all_scores)
 
-    def predict_next_single(self, state: Dict[str, Any]):
+    def predict_next_single(self, state: Dict[str, Any], scores: ...) -> ...:
         pass
 
 
@@ -243,10 +245,10 @@ class Decoder:
     def get_position_scores(
             self,
             hypos: Sequence[Hypothesis]) -> np.ndarray:
-        pos_scores = 0.0
+        pos_scores = np.zeros((len(hypos),))
         for index, predictor in enumerate(self._predictors):
             predictor_states = [hypo.states[index] for hypo in hypos]
-            pos_scores += predictor.predict_next(predictor_states)
+            pos_scores = predictor.predict_next(predictor_states, pos_scores)
         return pos_scores
 
     def complete_finished_hypothesis(
@@ -267,7 +269,8 @@ class Decoder:
             self,
             hypos: Sequence[Hypothesis],
             nbest: int) -> Sequence[Prediction]:
-        unfinished_hypos = [hypo for hypo in hypos if not self.is_finished(hypo)]
+        unfinished_hypos = [hypo for hypo in hypos if
+                            not self.is_finished(hypo)]
         pos_scores = self.get_position_scores(hypos=unfinished_hypos)
         base_scores = [hypo.score for hypo in unfinished_hypos]
         accumulated_scores = pos_scores + np.expand_dims(base_scores, 1)
@@ -292,7 +295,8 @@ class Decoder:
             seed: int,
             make_probs: Callable) -> Sequence[Prediction]:
 
-        unfinished_hypos = [hypo for hypo in hypos if not self.is_finished(hypo)]
+        unfinished_hypos = [hypo for hypo in hypos if
+                            not self.is_finished(hypo)]
         pos_scores = self.get_position_scores(hypos=unfinished_hypos)
         base_scores = [hypo.score for hypo in unfinished_hypos]
 
@@ -305,12 +309,14 @@ class Decoder:
             sampled_token_id = np.random.choice(
                 a=[i for i in range(vocab_size)],
                 size=1,
-                p=make_probs(pos_scores[sample_id,:]), # pos_scores[sample_id,:] needs to be 1-dimensional array
+                p=make_probs(pos_scores[sample_id, :]),
+                # pos_scores[sample_id,:] needs to be 1-dimensional array
             )
             predictions.append(
                 Prediction(
                     token_id=int(sampled_token_id),
-                    score=pos_scores[sample_id, int(sampled_token_id)] + base_scores[sample_id],
+                    score=pos_scores[sample_id, int(sampled_token_id)] +
+                          base_scores[sample_id],
                     parent_hypothesis=unfinished_hypos[sample_id])
             )
         predictions = self.complete_finished_hypothesis(

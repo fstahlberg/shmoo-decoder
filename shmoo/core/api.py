@@ -14,6 +14,8 @@ from collections import OrderedDict
 from typing import Any, Dict, Optional, Sequence
 from absl import logging
 
+from shmoo.core.interface import Decoder
+from shmoo.core.interface import Processor
 from shmoo.core import utils
 from shmoo import decoders
 from shmoo import predictors
@@ -35,20 +37,31 @@ class Shmoo:
         self._postprocessors = []
         self._decoder = None
 
+    def set_decoder(self, decoder: Decoder) -> None:
+        self._decoder = decoder
+
+    def add_preprocessor(self, preprocessor: Processor) -> None:
+        self._preprocessors.append(preprocessor)
+
+    def add_postprocessor(self, postprocessor: Processor) -> None:
+        self._postprocessors.append(postprocessor)
+
     def set_up(self, config: Dict[str, Any]) -> None:
         """Set up the Shmoo API with a config dictionary."""
-        self._decoder = decoders.setup_decoder(
+        decoder = decoders.setup_decoder(
             utils.get_from_config(config, "decoder"), config)
 
         # TODO: Extend to support multiple predictors
-        self._decoder.add_predictor(
+        decoder.add_predictor(
             predictors.setup_predictor(
                 utils.get_from_config(config, "framework"), config)
         )
 
+        self.set_decoder(decoder)
+
         for preprocessor in utils.get_from_config(config, "preprocessors"):
             # preprocessor is a str if no parameters are specified
-            self._preprocessors.append(
+            self.add_preprocessor(
                 prepostprocessing.setup_processor(
                     preprocessor if type(preprocessor) == str else
                     list(preprocessor.keys())[0],
@@ -57,7 +70,7 @@ class Shmoo:
 
         for postprocessor in utils.get_from_config(config, "postprocessors"):
             # postprocessor is a str if no parameters are specified
-            self._postprocessors.append(
+            self.add_postprocessor(
                 prepostprocessing.setup_processor(
                     postprocessor if type(postprocessor) == str else
                     list(postprocessor.keys())[0],

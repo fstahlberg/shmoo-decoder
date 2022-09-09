@@ -109,10 +109,10 @@ class FairseqPredictor(Predictor):
             }
         return new_state
 
-    def predict_next_single(self, state: Dict[str, Any]):
+    def predict_next_single(self, state: Dict[str, Any], scores: ...) -> ...:
         with torch.no_grad():
             consumed = torch.tensor(
                 [state["consumed"]], dtype=torch.long, device=self.device)
             log_probs, _ = self.model.forward_decoder(
                 consumed, self.encoder_outs, state["incremental_states"])
-            return log_probs[0].cpu().numpy()
+            return scores + log_probs[0].cpu().numpy()
