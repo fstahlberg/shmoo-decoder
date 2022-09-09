@@ -50,6 +50,9 @@ class Shmoo:
         """Set up the Shmoo API with a config dictionary."""
         decoder = decoders.setup_decoder(
             utils.get_from_config(config, "decoder"), config)
+        decoder.add_predictor(
+            predictors.setup_predictor(
+                utils.get_from_config(config, "framework"), config))
         for predictor in utils.get_from_config(config, "predictors"):
             decoder.add_predictor(predictors.setup_predictor(predictor, config))
 

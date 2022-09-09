@@ -6,6 +6,15 @@ are independent of the underlying NMT toolkit. The goal is to make decoding more
 extend the suite of decoding algorithms that are supported by existing NMT frameworks. Shmoo is a research-focused
 framework, and thus prefers modularity and extensibility over runtime performance.
 
+## Installation
+
+```commandline
+pip install --upgrade pip  # ensures that pip is current
+git clone https://github.com/fstahlberg/shmoo-decoder.git
+cd shmoo-decoder
+pip install .
+```
+
 ## Examples
 
 ### English-French translation with fairseq

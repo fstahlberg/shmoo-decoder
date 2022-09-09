@@ -12,9 +12,9 @@ try:
     from yaml import full_load
     import sentencepiece as spm
 except ImportError:
-    logging.info("ESPnet not available.")
+    logging.info("ESPnet pre/postprocessing not available.")
 else:
-    logging.info("ESPnet imports successful.")
+    logging.info("ESPnet pre/postprocessing imports successful.")
 
 
 CHECK = "\u2713"

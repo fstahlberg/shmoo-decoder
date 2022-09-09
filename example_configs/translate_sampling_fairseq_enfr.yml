@@ -4,8 +4,7 @@ fairseq:
    trg_lang: fr
    bpe: subword_nmt
    tokenizer: moses
-predictors:
-  - Fairseq
+framework: Fairseq
 decoder: SamplingDecoder
 decoder_config:
    samples: 6

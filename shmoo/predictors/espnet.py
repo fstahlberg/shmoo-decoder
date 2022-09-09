@@ -1,28 +1,32 @@
-import os
+from absl import logging
+
 import argparse
 import copy
 from typing import Dict, Any
 
-from yaml import full_load
-import torch
-from shmoo.core import utils
 from shmoo.core.interface import Predictor
 from shmoo.core.interface import Prediction
 from shmoo.predictors import register_predictor
 
-from espnet.nets.scorers.ctc import CTCPrefixScorer
-from espnet.nets.scorers.ctc import CTCPrefixScoreTH
+try:
+    from yaml import full_load
+    import torch
+    from espnet.nets.scorers.ctc import CTCPrefixScorer
+    from espnet.nets.scorers.ctc import CTCPrefixScoreTH
+    from espnet2.bin.st_inference import Speech2Text as ST
+    from espnet2.bin.asr_inference import Speech2Text as ASR
+    from espnet2.bin.mt_inference import Text2Text as MT
+    ESPNET_TASK_MAP = {"st": ST, "asr": ASR, "mt": MT}
+except ImportError:
+    logging.info("ESPnet predictor not available.")
+else:
+    logging.info("ESPnet predictor imports successful.")
 
-from espnet2.bin.st_inference import Speech2Text as ST
-from espnet2.bin.asr_inference import Speech2Text as ASR
-from espnet2.bin.mt_inference import Text2Text as MT
-
-ESPNET_TASK_MAP = {"st": ST, "asr": ASR, "mt": MT}
 
 
-@register_predictor("espnet")
+@register_predictor("Espnet")
 class ESPnetPredictor(Predictor):
-    def __init__(self, config: dict):
+    def __init__(self, config):
         """Initialize ESPnet model"""
 
         config_file = config["espnet"]["config"]

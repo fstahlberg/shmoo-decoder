@@ -5,8 +5,8 @@ fairseq:
    bpe: subword_nmt
    tokenizer: moses
 token_boost_token_id: 2
+framework: Fairseq
 predictors:
-   - Fairseq
    - LengthNorm
 decoder: BeamDecoder
 decoder_config:

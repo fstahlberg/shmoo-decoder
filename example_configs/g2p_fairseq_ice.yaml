@@ -3,8 +3,7 @@ fairseq:
    src_lang: ice.graphemes
    trg_lang: ice.phonemes
    tokenizer: space
-predictors:
-   - Fairseq
+framework: Fairseq
 decoder: 
    GreedyDecoder
 preprocessors:

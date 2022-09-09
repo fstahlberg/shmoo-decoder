@@ -4,7 +4,7 @@ espnet:
    config: exp/asr_transformer_bpe5000_lr_0.001_ctc_0.3/config.yaml
    src_lang: en
    bpe: spm
-framework: espnet
+framework: Espnet
 decoder: BeamDecoder
 decoder_config:
    beam_size: 20
