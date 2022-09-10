@@ -5,7 +5,7 @@ DFS, B(readth)FS, B(est)FS
 from typing import Any, Dict, Sequence
 import heapq
 
-from shmoo.core.interface import Decoder
+from shmoo.core.interface import Decoder, Hypothesis
 from shmoo.decoders import register_decoder
 
 
@@ -56,6 +56,8 @@ class _TreeSearchDecoder(Decoder):
         while open_set:
             # pop from the open set
             curr_score, hypo = open_set.pop()
+            if not isinstance(hypo, Hypothesis):
+                hypo = self.make_hypothesis(hypo)
 
             if self.is_finished(hypo):
                 finished_hypos.append(hypo)
@@ -65,12 +67,11 @@ class _TreeSearchDecoder(Decoder):
 
             # todo: don't hard-code this nbest, and consider thresholds for
             # these things (as in the cat-got-your-tongue paper)
-            # (also, it may be worthwhile to put the eos prediction at the
-            # front)
             predictions = self.get_predictions([hypo], nbest=10)
-            predictions.sort(key=lambda h: h.score, reverse=True)
-            for pred in predictions:
-                open_set.append((pred.score, self.make_hypothesis(pred)))
+            for pred in reversed(predictions):
+                # predictions are reversed so that the best prediction is the
+                # first to be popped from the stack in DFS
+                open_set.append((pred.score, pred))
 
         return self.make_final_output_features(input_features, finished_hypos)
 
