@@ -1,9 +1,19 @@
+"""
+Predictor imported from ESPnet2 model.
+Currently supports the following types of models
+- Automatic speech recogition
+- Machine translation
+- Speech translation
+"""
+
 from absl import logging
 
 import argparse
 import copy
 from typing import Dict, Any
+import numpy as np
 
+from shmoo.core import utils
 from shmoo.core.interface import Predictor
 from shmoo.core.interface import Prediction
 from shmoo.predictors import register_predictor
@@ -26,12 +36,23 @@ else:
 
 @register_predictor("Espnet")
 class ESPnetPredictor(Predictor):
-    def __init__(self, config):
-        """Initialize ESPnet model"""
+    """Predictor of ESPnet model"""
 
-        config_file = config["espnet"]["config"]
-        model_path = config["espnet"]["model_path"]
-        self.task = config["espnet"]["task"]
+    def __init__(self, config: dict):
+        """Initialize ESPnet model
+
+        Args:
+            config (dict): Shmoo config dictionary
+        """
+
+        try:
+            # Espnet config file
+            config_file = config["espnet"]["config"]
+            model_path = config["espnet"]["model_path"]
+            self.task = config["espnet"]["task"]
+
+        except KeyError:
+            raise KeyError("Mandatory keys in shmoo config file under espnet are `config` `model_path` and `task`.")
 
         self.inference = ESPNET_TASK_MAP[self.task](config_file, model_path)
 
@@ -43,14 +64,15 @@ class ESPnetPredictor(Predictor):
         self.weights = {}
         self.scorers = {}
 
-        ctc_weight = config["decoder_config"]["ctc_weight"]
-        self.pre_beam_score_key = "full"
-        beam_size = config["decoder_config"]["beam_size"]
-        self.pre_beam_size = int(
-            config["decoder_config"]["pre_beam_factor"] * beam_size
-        )
+        if self.task == "asr":
+            ctc_weight = config["decoder_config"]["ctc_weight"]
+            self.pre_beam_score_key = "full"
+            beam_size = config["decoder_config"]["beam_size"]
+            self.pre_beam_size = int(
+                config["decoder_config"]["pre_beam_factor"] * beam_size
+            )
 
-        # we should set it from the information from pre-processor
+        # we should set it using the information from pre-processor
         self.bos_index = len(self.config["token_list"]) - 1
         self.eos_index = len(self.config["token_list"]) - 1
 
@@ -70,18 +92,33 @@ class ESPnetPredictor(Predictor):
 
         elif self.task == "mt":
             self.model = self.inference.mt_model
+            decoder = self.model.decoder
+            self.weights = {"decoder": 1.0}
+            self.scorers = {"decoder": decoder}
 
         else:
             raise NotImplementedError("{:s} task is not implemented yet.".format(task))
 
     def initialize_state(self, input_features: Dict[str, Any]) -> Dict[str, Any]:
+        """Initialize state"""
 
         # init predictor state with "consumed" sequence containing only BOS
-        state = {"consumed": [self.bos_index], "decoder": [None], "ctc": [None]}
+        state = {"consumed": [self.bos_index], "decoder": [None]}
+
+        if self.task == "asr":
+            state["ctc"] = [None]
 
         state["incremental_states"] = []
 
-        input_feats = torch.from_numpy(input_features["input"]["ids"])
+        src_input = utils.get_last_item(input_features["input"])[1]
+        # text input is passed as list
+        if isinstance(src_input, list):
+            input_feats = torch.LongTensor(src_input)
+
+        # speech features are passed as numpy array
+        elif isinstance(src_input, np.ndarray):
+            input_feats = torch.from_numpy(src_input)
+
         input_feats = input_feats.unsqueeze(0)
         lengths = input_feats.new_full(
             [1], dtype=torch.long, fill_value=input_feats.size(1)
@@ -90,7 +127,7 @@ class ESPnetPredictor(Predictor):
         encoder_outs, _ = self.model.encode(input_feats, lengths)
         self.encoder_outs = encoder_outs[0]
 
-        print("enc outs:", self.encoder_outs.shape)
+        logging.info("Encoder outputs: {:d} {:d}".format(*self.encoder_outs.shape))
 
         if self.task == "asr":
             if "ctc" in self.scorers:
@@ -109,9 +146,11 @@ class ESPnetPredictor(Predictor):
         else:
             new_state = {
                 "consumed": state["consumed"] + [prediction.token_id],
-                "ctc": copy.deepcopy(state["ctc"]),
                 "decoder": copy.deepcopy(state["decoder"]),
             }
+            if self.task == "asr":
+                new_state["ctc"] = copy.deepcopy(state["ctc"]),
+
         return new_state
 
     def predict_next_single(self, state: Dict[str, Any], scores):
@@ -132,7 +171,7 @@ class ESPnetPredictor(Predictor):
 
 
             if self.task in ("asr"):
-
+                # ToDo (santosh):
                 pre_beam_scores = []
 
                 # might contain multiple scorers i.e.,
@@ -158,7 +197,7 @@ class ESPnetPredictor(Predictor):
         return scores + weighted_scores.squeeze().cpu().numpy()
 
 
-def main(args):
+def test(args):
 
     predictor = ESPnetPredictor(args.config_file, args.model_pth)
 
@@ -169,4 +208,4 @@ if __name__ == "__main__":
     parser.add_argument("config_file")
     parser.add_argument("model_pth")
     args = parser.parser_args()
-    main(args)
+    test(args)

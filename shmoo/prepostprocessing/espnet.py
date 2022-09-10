@@ -1,7 +1,13 @@
+"""
+Input pre-processing and output post-processing for ESPnet2 models
+- Input can be text, speech features in kaldi_ark format
+- Output will be text
+- Support for speech recogition, text-to-text and speech-to-text translation
+"""
+
 from absl import logging
 from collections import OrderedDict
 from typing import Any, Dict
-import sys
 import os
 import pickle
 from shmoo.core import utils
@@ -11,6 +17,9 @@ from shmoo.prepostprocessing import register_processor
 try:
     from yaml import full_load
     import sentencepiece as spm
+    import kaldiio
+
+    # import soundfile
 except ImportError:
     logging.info("ESPnet pre/postprocessing not available.")
 else:
@@ -19,15 +28,17 @@ else:
 
 CHECK = "\u2713"
 
+
 # @register_processor("ESPnetProcessor")
 class ESPnetProcessor(Processor):
     def __init__(self, config: str):
         """
 
         Args:
-            config_file (str): Path to ESPnet2 config.yaml file of a trained model
+            config (dict): The shmoo config
         """
 
+        #  espnet config file
         config_file = config["espnet"]["config"]
 
         self.config_file = config_file
@@ -48,9 +59,9 @@ class ESPnetProcessor(Processor):
         self.set_up()
 
     def check(self):
-        """Checks if the config file has all the necessary keys"""
+        """Checks if the ESPnet2 config file has all the necessary keys"""
 
-        logging.info("Checking config yaml")
+        logging.info("Checking ESPnet2 config yaml")
 
         for key in [
             "train_data_path_and_name_and_type",
@@ -60,18 +71,16 @@ class ESPnetProcessor(Processor):
         ]:
 
             if key == "train_data_path_and_name_and_type":
-                _, input_type, input_format = self.config[key][0]
-                if input_type == "speech":
-                    if input_format in ("kaldi_ark", "sound"):
-                        self.input_type = input_type
-                        self.input_format = input_format
-                    else:
+                _, self.input_type, self.input_format = self.config[key][0]
+                if self.input_type == "speech":
+                    if self.input_format != "kaldi_ark":
                         logging.error(
-                            f"Input format_type {input_format} not supported yet. Currently supports kaldi_ark formatted features or raw audio/sound.",
+                            f"Input format_type {self.input_format} not supported yet. Currently supports kaldi_ark formatted speech features.",
                         )
                         raise NotImplementedError
-                logging.info("Input modaility: {:s}".format(input_type))
-                logging.info("Input format   : {:s}".format(input_format))
+
+                logging.info("Input modaility: {:s}".format(self.input_type))
+                logging.info("Input format   : {:s}".format(self.input_format))
 
             if key == "model":
                 key = self.config["token_type"] + "model"
@@ -96,6 +105,7 @@ class ESPnetProcessor(Processor):
                 logging.info("{:s} {:s}".format(key, CHECK))
 
     def set_up(self):
+        """Load tokenizer, and build token2int, int2token mappings"""
 
         for i, tok in enumerate(self.config["token_list"]):
             self.token2int[tok] = i
@@ -121,66 +131,61 @@ class ESPnetProcessor(Processor):
 
 @register_processor("ESPnetPreprocessor")
 class ESPnetPreprocessor(Preprocessor, ESPnetProcessor):
-    def __init__(self, config_file):
+    """Input preprocessor for ESPnet"""
+
+    def __init__(self, config: dict):
+        """Initialize the preprocessor"""
 
         logging.info("Setting up espnet preprocessor")
-        super().__init__(config_file)
+        super().__init__(config)
         logging.info("Preprocessor setup done")
 
     def process(self, features: Dict[str, Any]) -> None:
-        """Tokenize text from `input_raw` and save the ids as values for `input_ids`"""
+        """Tokenize raw text sequence to ids"""
+
+        raw_feats = utils.get_last_item(features["input"])[1]
 
         if self.input_type == "text":
             if self.config["token_type"] == "bpe":
                 features["input"]["ids"] = [
                     self.token2int[tok]
-                    for tok in self.tokenizer_model.EncodeAsPieces(
-                        features["input"]["raw"]
-                    )
+                    for tok in self.tokenizer_model.EncodeAsPieces(raw_feats)
                 ]
-                print(features["input"]["raw"], features["input"]["ids"])
             else:
-                raise NotImplementedError
+                raise NotImplementedError("Input type should be either text or speech.")
 
         elif self.input_type == "speech":
             if self.input_format == "kaldi_ark":
 
-                try:
-                    import kaldiio
+                features["input"]["ids"] = kaldiio.load_mat(raw_feats)
 
-                    features["input"]["ids"] = kaldiio.load_mat(
-                        features["input"]["raw"]
+                logging.info(
+                    "{:s} ({:d},{:d})".format(
+                        features["input"]["raw"], *features["input"]["ids"].shape
                     )
-
-                    logging.info(
-                        "{:s} ({:d},{:d})".format(
-                            features["input"]["raw"], *features["input"]["ids"].shape
-                        )
-                    )
-
-                except ModuleNotFoundError:
-                    pass
-
-            elif self.input_format == "sound":
-                try:
-                    import soundfile
-                except ImportError:
-                    logging.info("soundfile not found. pip install soundfile")
+                )
 
             else:
-                raise NotImplementedError
+                raise NotImplementedError(
+                    "Input format {:s} for input type {:s} not supported yet".format(
+                        self.input_format, self.input_type
+                    )
+                )
 
 
 @register_processor("ESPnetPostprocessor")
 class ESPnetPostprocessor(Postprocessor, ESPnetProcessor):
-    def __init__(self, config_file: str):
+    """Post processor for outputs produced by ESPnet2"""
+
+    def __init__(self, config: dict):
+        """Initialize the post processor"""
 
         logging.info("Setting up espnet postprocessor")
-        super().__init__(config_file)
+        super().__init__(config)
         logging.info("Postprocessor setup done")
 
     def process(self, features: Dict[str, Any]) -> None:
-        """Post process bpe IDs to sequence of tokens"""
+        """Post process token IDs to sequence of token strings"""
 
         if self.config["token_type"] == "bpe":
 

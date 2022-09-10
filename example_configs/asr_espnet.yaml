@@ -5,6 +5,8 @@ espnet:
    src_lang: en
    bpe: spm
 framework: Espnet
+predictors:
+   - LengthNorm
 decoder: BeamDecoder
 decoder_config:
    beam_size: 20
