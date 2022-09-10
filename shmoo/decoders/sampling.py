@@ -88,7 +88,7 @@ class SamplingDecoder(Decoder):
             log_probs=log_probs,
             cutoff_p=cutoff_p)
 
-    def normalise_scores_acc_to_expected_info(self, log_probs: np.ndarray,
+    def normalise_scores_acc_to_dev_from_expected_info(self, log_probs: np.ndarray,
                                               cutoff_p: float) -> np.ndarray:
         entropy = -np.sum(np.exp(log_probs) * log_probs)
         shifted_abs_log_probs = np.abs(entropy + log_probs)
