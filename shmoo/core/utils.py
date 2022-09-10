@@ -41,8 +41,8 @@ def get_from_decoder_config(config, key: str, default: Optional[Any] = None):
         config, key, subsection='decoder_config', default=default)
 
 
-def get_from_config(config, key: str, subsection: Optional[str] = None,
-                    default: Optional[Any] = None) -> Any:
+def get_from_config(config, key: str, default: Optional[Any] = None,
+                    subsection: Optional[str] = None) -> Any:
     if subsection is not None:
         try:
             return config[subsection][key]

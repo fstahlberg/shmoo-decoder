@@ -53,7 +53,7 @@ class Shmoo:
         decoder.add_predictor(
             predictors.setup_predictor(
                 utils.get_from_config(config, "framework"), config))
-        for predictor in utils.get_from_config(config, "predictors"):
+        for predictor in utils.get_from_config(config, "predictors", default=[]):
             decoder.add_predictor(predictors.setup_predictor(predictor, config))
 
         self.set_decoder(decoder)
