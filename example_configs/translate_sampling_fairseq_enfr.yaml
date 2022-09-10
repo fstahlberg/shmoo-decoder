@@ -8,6 +8,7 @@ framework: Fairseq
 decoder: SamplingDecoder
 decoder_config:
    samples: 6
+   strategy: typical
 preprocessors:
    - FairseqTokenizerPreprocessor
    - FairseqBPEPreprocessor
