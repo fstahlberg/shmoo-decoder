@@ -1,0 +1,14 @@
+fairseq:
+   model_dir: /home/bpop/phd/entmax-decoding/g2p/checkpoints/ice-256-.3-s-s
+   src_lang: ice.graphemes
+   trg_lang: ice.phonemes
+   tokenizer: space
+framework: fairseq
+decoder: 
+   BestFirstDecoder
+preprocessors:
+   - FairseqTokenizerPreprocessor
+   - FairseqSplitPreprocessor
+postprocessors:
+   - FairseqSplitPostprocessor
+   - FairseqTokenizerPostprocessor
