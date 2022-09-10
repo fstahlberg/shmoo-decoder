@@ -8,7 +8,7 @@ framework, and thus prefers modularity and extensibility over runtime performanc
 
 ## Installation
 
-The minimal dependencies are `numpy`, `scipy`, and `absl-py`. Shmoo with these dependencies can be installed as follows: 
+The minimal dependencies are `numpy`, `scipy`, and `absl-py`. Shmoo with these dependencies can be installed as follows:
 
 ```commandline
 pip install --upgrade pip  # ensures that pip is current
@@ -53,10 +53,34 @@ This replicates
 the [Getting Started example in fairseq](https://fairseq.readthedocs.io/en/latest/getting_started.html#evaluating-pre-trained-models):
 
 ```commandline
-python3 run.py --config_path=example_configs/translate_fairseq_enfr.yaml --single_sentence='Why is it rare to discover new marine mammal species?' 
+python3 run.py --config_path=example_configs/translate_fairseq_enfr.yaml --single_sentence='Why is it rare to discover new marine mammal species?'
 ```
 
 You will need to download the English-French WMT'14 checkpoint as described in the fairseq documentation.
+
+### Speech recognition, text-to-text and speech-to-text translation  with ESPnet2
+
+- The speech pre-processing currently supports only extracted speech features that are saved in `kaldi_ark` format.
+- It is straightforward to extend it other input formats includig raw audio. See [shmoo/prepostprocessing/espnet.py](shmoo/prepostprocessing/espnet.py).
+- See [example_configs/asr_espnet.yaml](example_configs/asr_espnet.yaml) for a sample shmoo config that uses ESPnet2 model. It requires three keys:
+  - `task`: `asr` or `st` or `mt`
+  - `config`: path to `config.yaml` from a trained ESPnet2 model
+  - `model_path`: path to trained ESPnet2 model
+
+- Example run for `asr`
+  ```
+   python run.py --config_path=example_configs/asr_espnet.yaml --kaldi_ark=fbank_pitch_181506/raw_fbank_pitch_all_181506.1.ark:81061823
+  ```
+
+- Example run for `st`
+  ```
+  python run.py --config_path=example_configs/st_espnet.yaml --kaldi_ark=fbank_pitch_181506/raw_fbank_pitch_all_181506.1.ark:81061823
+  ```
+
+- Example run for `mt`
+  ```
+  python run.py --config_path=example_configs/mt_espnet.yaml --single_sentence="The aileron is the control surface in the wing that is controlled by lateral movement right and left of the stick ."
+  ```
 
 ## Software design
 
