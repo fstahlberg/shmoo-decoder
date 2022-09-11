@@ -84,7 +84,7 @@ class _TreeSearchDecoder(Decoder):
                 continue
 
             # todo: don't hard-code this nbest
-            predictions = self.get_predictions([hypo], nbest=80)
+            predictions = self.get_predictions([hypo], nbest=87)
 
             # DFS: you want scores in ascending order, except for EOS which
             # you put last so it will always be popped first

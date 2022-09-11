@@ -5,7 +5,7 @@ fairseq:
    tokenizer: space
 framework: Fairseq
 decoder: 
-   DepthFirstDecoder
+   BestFirstDecoder
 preprocessors:
    - FairseqTokenizerPreprocessor
    - FairseqSplitPreprocessor
