@@ -15,6 +15,12 @@ class PriorityQueue:
         self.maxheap = maxheap
         self.heap = []
 
+    def peek(self):
+        score, data = self.heap[0]
+        if self.maxheap:
+            score = -score
+        return score, data
+
     def pop(self):
         score, data = heapq.heappop(self.heap)
         if self.maxheap:
@@ -46,6 +52,13 @@ class _TreeSearchDecoder(Decoder):
     def build_open_set(self):
         raise NotImplementedError("Need to use a concrete implementation")
 
+    def stop_early(self, open_set, best_complete):
+        """
+        Stop search early because the current node has a worse score than the
+        best found so far. This is possible only BestFS
+        """
+        return False
+
     def process(
             self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
         initial_hypo = self.make_initial_hypothesis(input_features)
@@ -53,25 +66,35 @@ class _TreeSearchDecoder(Decoder):
         open_set = self.build_open_set()
         open_set.append((0.0, initial_hypo))
         finished_hypos = []
+        best_complete = float('-inf')
         while open_set:
+            if self.stop_early(open_set, best_complete):
+                break
+
             # pop from the open set
-            curr_score, hypo = open_set.pop()
+            curr_priority, hypo = open_set.pop()
+
             if not isinstance(hypo, Hypothesis):
                 hypo = self.make_hypothesis(hypo)
 
             if self.is_finished(hypo):
                 finished_hypos.append(hypo)
-                # todo: real stopping conditions
-                # (currently it terminates on the first finished hypothesis)
-                break
+                best_complete = max(best_complete, hypo.score)
+                # covered_mass += math.exp(hypo.score)
+                continue
 
-            # todo: don't hard-code this nbest, and consider thresholds for
-            # these things (as in the cat-got-your-tongue paper)
-            predictions = self.get_predictions([hypo], nbest=10)
+            # todo: don't hard-code this nbest
+            predictions = self.get_predictions([hypo], nbest=80)
+
+            # DFS: you want scores in ascending order, except for EOS which
+            # you put last so it will always be popped first
+            # BestFS: the order doesn't matter
             for pred in reversed(predictions):
-                # predictions are reversed so that the best prediction is the
-                # first to be popped from the stack in DFS
-                open_set.append((pred.score, pred))
+                # this is very not-optimized
+                if pred.score < best_complete:
+                    continue
+                priority = pred.score  # different for ad-hoc completion
+                open_set.append((priority, pred))
 
         return self.make_final_output_features(input_features, finished_hypos)
 
@@ -80,6 +103,10 @@ class _TreeSearchDecoder(Decoder):
 class BestFirstDecoder(_TreeSearchDecoder):
     def build_open_set(self):
         return PriorityQueue()
+
+    def stop_early(self, open_set, best_complete):
+        curr_hyp = open_set.peek()[1]
+        return curr_hyp.score < best_complete
 
 
 @register_decoder("DepthFirstDecoder")
