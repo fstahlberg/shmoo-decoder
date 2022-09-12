@@ -5,7 +5,7 @@ fairseq:
    tokenizer: space
 framework: Fairseq
 decoder: 
-   BestFirstDecoder
+   DepthFirstDecoder
 decoder_config:
    nbest_predictions: 87
 preprocessors:

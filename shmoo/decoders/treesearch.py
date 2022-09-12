@@ -6,6 +6,7 @@ from typing import Any, Dict, Sequence
 import heapq
 
 from shmoo.core.interface import Decoder, Hypothesis
+from shmoo.core import utils
 from shmoo.decoders import register_decoder
 
 
@@ -49,6 +50,9 @@ class _TreeSearchDecoder(Decoder):
     def __init__(self, config):
         super().__init__(config)
 
+        self.nbest_predictions = utils.get_from_decoder_config(
+            config, 'nbest_predictions', 5)
+
     def build_open_set(self):
         raise NotImplementedError("Need to use a concrete implementation")
 
@@ -83,8 +87,12 @@ class _TreeSearchDecoder(Decoder):
                 # covered_mass += math.exp(hypo.score)
                 continue
 
-            # todo: don't hard-code this nbest
-            predictions = self.get_predictions([hypo], nbest=87)
+            predictions = self.get_predictions(
+                [hypo], nbest=self.nbest_predictions
+            )
+
+            # how do you generate the set of predictions that will be added
+            # to the open set?
 
             # DFS: you want scores in ascending order, except for EOS which
             # you put last so it will always be popped first
