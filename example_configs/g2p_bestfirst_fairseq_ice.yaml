@@ -7,7 +7,7 @@ framework: Fairseq
 decoder: 
    BestFirstDecoder
 decoder_config:
-   nbest_predictions: 87
+   nbest_predictions: 0
 preprocessors:
    - FairseqTokenizerPreprocessor
    - FairseqSplitPreprocessor

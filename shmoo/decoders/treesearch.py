@@ -5,7 +5,9 @@ DFS, B(readth)FS, B(est)FS
 from typing import Any, Dict, Sequence
 import heapq
 
-from shmoo.core.interface import Decoder, Hypothesis
+import numpy as np
+
+from shmoo.core.interface import Decoder, Hypothesis, Prediction
 from shmoo.core import utils
 from shmoo.decoders import register_decoder
 
@@ -63,6 +65,47 @@ class _TreeSearchDecoder(Decoder):
         """
         return False
 
+    def order_predictions(self):
+        """
+        Sort the predictions in the order in which they should be appended to
+        the open set.
+        """
+        pass
+
+    def get_predictions(
+            self,
+            hypos: Sequence[Hypothesis],
+            nbest: int = 0,
+            score_threshold: float = float("-inf")) -> Sequence[Prediction]:
+        # score threshold should be a batch-sized array, not a single float.
+
+        if nbest > 0:
+            return super().get_predictions(hypos, nbest)
+
+        unfinished_hypos = [hypo for hypo in hypos if
+                            not self.is_finished(hypo)]
+
+        pos_scores = self.get_position_scores(hypos=unfinished_hypos)
+        base_scores = [hypo.score for hypo in unfinished_hypos]
+        accumulated_scores = pos_scores + np.expand_dims(base_scores, 1)
+        # if not using nbest, it should not be necessary to call argpartition
+
+        predictions = []
+        # todo: actual score threshold
+        indices = np.nonzero(accumulated_scores > score_threshold)
+        for hypo_index, token_id in zip(indices[0], indices[1]):
+            predictions.append(
+                Prediction(
+                    token_id=token_id,
+                    score=accumulated_scores[hypo_index, token_id],
+                    parent_hypothesis=unfinished_hypos[hypo_index]))
+        predictions = self.complete_finished_hypothesis(
+            hypos=hypos, predictions=predictions)
+
+        # subclass decides whether/how to sort
+        self.order_predictions(predictions)
+        return predictions
+
     def process(
             self, input_features: Dict[str, Any]) -> Sequence[Dict[str, Any]]:
         initial_hypo = self.make_initial_hypothesis(input_features)
@@ -71,6 +114,7 @@ class _TreeSearchDecoder(Decoder):
         open_set.append((0.0, initial_hypo))
         finished_hypos = []
         best_complete = float('-inf')
+        pred_calls = 0
         while open_set:
             if self.stop_early(open_set, best_complete):
                 break
@@ -88,21 +132,16 @@ class _TreeSearchDecoder(Decoder):
                 continue
 
             predictions = self.get_predictions(
-                [hypo], nbest=self.nbest_predictions
+                [hypo],
+                nbest=self.nbest_predictions,
+                score_threshold=best_complete
             )
+            pred_calls += 1
 
-            # how do you generate the set of predictions that will be added
-            # to the open set?
-
-            # DFS: you want scores in ascending order, except for EOS which
-            # you put last so it will always be popped first
-            # BestFS: the order doesn't matter
-            for pred in reversed(predictions):
-                # this is very not-optimized
-                if pred.score < best_complete:
-                    continue
+            for pred in predictions:
                 priority = pred.score  # different for ad-hoc completion
                 open_set.append((priority, pred))
+        print(pred_calls)
 
         return self.make_final_output_features(input_features, finished_hypos)
 
@@ -121,3 +160,11 @@ class BestFirstDecoder(_TreeSearchDecoder):
 class DepthFirstDecoder(_TreeSearchDecoder):
     def build_open_set(self):
         return []
+
+    def order_predictions(self, predictions):
+        """
+        Scores should be in ascending order except for the eos, which should
+        occur last so that it is always at the top of the stack.
+        """
+        predictions.sort(key=lambda p: float("inf")
+                         if p.token_id == self.eos_id else p.score)
